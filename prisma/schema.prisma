@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["public"]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model books {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  google_books_id String?      @unique @db.VarChar(20)
+  title           String
+  author          String?      @db.VarChar(100)
+  thumbnail_url   String?
+  isbn            String?      @db.VarChar(13)
+  page_count      Int?
+  description     String?
+  created_at      DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime     @default(now()) @db.Timestamptz(6)
+  user_books      user_books[]
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model categories {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String    @db.VarChar(50)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  studies    studies[]
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model memo_tags {
+  memo_id    String   @db.Uuid
+  tag_id     String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  memos      memos    @relation(fields: [memo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tags       tags     @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([memo_id, tag_id])
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model memos {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_book_id String      @db.Uuid
+  content      String
+  is_important Boolean     @default(false)
+  page_number  Int?
+  created_at   DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime    @default(now()) @db.Timestamptz(6)
+  memo_tags    memo_tags[]
+  user_books   user_books  @relation(fields: [user_book_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model profiles {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String       @unique @db.Uuid
+  account_name String?      @unique @db.VarChar(50)
+  display_name String?      @db.VarChar(50)
+  bio          String?
+  avatar_url   String?
+  created_at   DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime     @default(now()) @db.Timestamptz(6)
+  studies      studies[]
+  tags         tags[]
+  user_books   user_books[]
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model studies {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profile_id       String      @db.Uuid
+  category_id      String?     @db.Uuid
+  duration_minutes Int
+  note             String?
+  created_at       DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime    @default(now()) @db.Timestamptz(6)
+  categories       categories? @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  profiles         profiles    @relation(fields: [profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tags {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profile_id String      @db.Uuid
+  name       String      @db.VarChar(50)
+  color      String      @default("#3B82F6") @db.VarChar(7)
+  created_at DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at DateTime    @default(now()) @db.Timestamptz(6)
+  memo_tags  memo_tags[]
+  profiles   profiles    @relation(fields: [profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model user_books {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profile_id    String    @db.Uuid
+  book_id       String    @db.Uuid
+  status        Int       @default(0)
+  is_favorite   Boolean   @default(false)
+  started_at    DateTime? @db.Date
+  finished_at   DateTime? @db.Date
+  progress_page Int?
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+  memos         memos[]
+  books         books     @relation(fields: [book_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles      profiles  @relation(fields: [profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
