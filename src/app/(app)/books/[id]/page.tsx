@@ -439,7 +439,7 @@ export default function BookDetailPage() {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-start gap-1 flex-shrink-0">
+                      <div className="flex items-start gap-1 shrink-0">
                         <button
                           onClick={() => handleToggleImportant(memo.id)}
                           className={
