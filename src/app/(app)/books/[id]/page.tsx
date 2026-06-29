@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, Star, Trash2, Plus } from 'lucide-react';
+import { Heart, Star, Trash2, Plus, X } from 'lucide-react';
 
 const STATUS_OPTIONS = [
   { value: 0, label: '未読' },
@@ -9,12 +9,34 @@ const STATUS_OPTIONS = [
   { value: 2, label: '読了' },
 ];
 
+type Tag = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type Memo = {
   id: string;
   content: string;
   isImportant: boolean;
   pageNumber: string;
+  tagIds: string[];
 };
+
+const TAG_COLORS = [
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+];
+
+const dummyTags: Tag[] = [
+  { id: '1', name: '重要', color: '#EF4444' },
+  { id: '2', name: '復習', color: '#3B82F6' },
+  { id: '3', name: '気づき', color: '#10B981' },
+];
 
 const dummyMemos: Memo[] = [
   {
@@ -22,18 +44,21 @@ const dummyMemos: Memo[] = [
     content: '抽象化の重要性について',
     isImportant: true,
     pageNumber: '32',
+    tagIds: ['1'],
   },
   {
     id: '2',
     content: '具体と抽象を行き来する思考法',
     isImportant: false,
     pageNumber: '56',
+    tagIds: ['2', '3'],
   },
   {
     id: '3',
     content: 'ピラミッド構造で整理する',
     isImportant: true,
     pageNumber: '78',
+    tagIds: [],
   },
 ];
 
@@ -46,12 +71,18 @@ export default function BookDetailPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  const [tags, setTags] = useState<Tag[]>(dummyTags);
   const [memos, setMemos] = useState<Memo[]>(dummyMemos);
   const [showImportantOnly, setShowImportantOnly] = useState(false);
+  const [filterTagId, setFilterTagId] = useState<string | null>(null);
   const [newContent, setNewContent] = useState('');
   const [newPageNumber, setNewPageNumber] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
+  const [showTagForm, setShowTagForm] = useState(false);
 
   const handleSave = async () => {
     setLoading(true);
@@ -68,6 +99,7 @@ export default function BookDetailPage() {
       content: newContent,
       isImportant: false,
       pageNumber: newPageNumber,
+      tagIds: [],
     };
     setMemos([...memos, newMemo]);
     setNewContent('');
@@ -98,9 +130,43 @@ export default function BookDetailPage() {
     setEditingId(null);
   };
 
-  const filteredMemos = showImportantOnly
-    ? memos.filter((m) => m.isImportant)
-    : memos;
+  const handleToggleTag = (memoId: string, tagId: string) => {
+    setMemos(
+      memos.map((m) => {
+        if (m.id !== memoId) return m;
+        const hasTag = m.tagIds.includes(tagId);
+        return {
+          ...m,
+          tagIds: hasTag
+            ? m.tagIds.filter((t) => t !== tagId)
+            : [...m.tagIds, tagId],
+        };
+      })
+    );
+  };
+
+  const handleAddTag = () => {
+    if (!newTagName.trim()) return;
+    const newTag: Tag = {
+      id: Date.now().toString(),
+      name: newTagName,
+      color: newTagColor,
+    };
+    setTags([...tags, newTag]);
+    setNewTagName('');
+    setShowTagForm(false);
+  };
+
+  const handleDeleteTag = (id: string) => {
+    setTags(tags.filter((t) => t.id !== id));
+    setMemos(
+      memos.map((m) => ({ ...m, tagIds: m.tagIds.filter((t) => t !== id) }))
+    );
+  };
+
+  const filteredMemos = memos
+    .filter((m) => !showImportantOnly || m.isImportant)
+    .filter((m) => !filterTagId || m.tagIds.includes(filterTagId));
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -114,9 +180,7 @@ export default function BookDetailPage() {
           <p className="text-sm text-gray-500 mb-3">著者名</p>
           <button
             onClick={() => setIsFavorite(!isFavorite)}
-            className={`flex items-center gap-1 text-sm ${
-              isFavorite ? 'text-red-500' : 'text-gray-400'
-            }`}
+            className={`flex items-center gap-1 text-sm ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
           >
             <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
             {isFavorite ? 'お気に入り済み' : 'お気に入りに追加'}
@@ -196,20 +260,104 @@ export default function BookDetailPage() {
         </button>
       </div>
 
+      {/* タグ管理 */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-gray-700">タグ</h2>
+          <button
+            onClick={() => setShowTagForm(!showTagForm)}
+            className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+          >
+            <Plus size={12} />
+            タグを追加
+          </button>
+        </div>
+
+        {showTagForm && (
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="タグ名"
+            />
+            <div className="flex gap-1">
+              {TAG_COLORS.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setNewTagColor(color)}
+                  className={`w-6 h-6 rounded-full border-2 ${newTagColor === color ? 'border-gray-800' : 'border-transparent'}`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <button
+              onClick={handleAddTag}
+              className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700"
+            >
+              追加
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <div
+              key={tag.id}
+              className="flex items-center gap-1 px-2 py-1 rounded-full text-white text-xs"
+              style={{ backgroundColor: tag.color }}
+            >
+              <span>{tag.name}</span>
+              <button
+                onClick={() => handleDeleteTag(tag.id)}
+                className="hover:opacity-70"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* メモ */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-700">メモ</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImportantOnly(!showImportantOnly)}
+              className={`text-xs px-3 py-1 rounded-full border ${
+                showImportantOnly
+                  ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
+                  : 'bg-white text-gray-500 border-gray-300'
+              }`}
+            >
+              重要のみ
+            </button>
+          </div>
+        </div>
+
+        {/* タグフィルター */}
+        <div className="flex flex-wrap gap-2 mb-4">
           <button
-            onClick={() => setShowImportantOnly(!showImportantOnly)}
-            className={`text-xs px-3 py-1 rounded-full border ${
-              showImportantOnly
-                ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
-                : 'bg-white text-gray-500 border-gray-300'
-            }`}
+            onClick={() => setFilterTagId(null)}
+            className={`text-xs px-3 py-1 rounded-full border ${!filterTagId ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-300'}`}
           >
-            重要のみ
+            すべて
           </button>
+          {tags.map((tag) => (
+            <button
+              key={tag.id}
+              onClick={() =>
+                setFilterTagId(filterTagId === tag.id ? null : tag.id)
+              }
+              className={`text-xs px-3 py-1 rounded-full border text-white ${filterTagId === tag.id ? 'opacity-100' : 'opacity-60'}`}
+              style={{ backgroundColor: tag.color, borderColor: tag.color }}
+            >
+              {tag.name}
+            </button>
+          ))}
         </div>
 
         {/* メモ追加フォーム */}
@@ -276,38 +424,64 @@ export default function BookDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-sm text-gray-700 cursor-pointer hover:text-blue-600"
-                        onClick={() => handleEditStart(memo)}
-                      >
-                        {memo.content}
-                      </p>
-                      {memo.pageNumber && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          p.{memo.pageNumber}
+                  <div>
+                    <div className="flex gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm text-gray-700 cursor-pointer hover:text-blue-600"
+                          onClick={() => handleEditStart(memo)}
+                        >
+                          {memo.content}
                         </p>
-                      )}
+                        {memo.pageNumber && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            p.{memo.pageNumber}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-start gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleToggleImportant(memo.id)}
+                          className={
+                            memo.isImportant
+                              ? 'text-yellow-500'
+                              : 'text-gray-300'
+                          }
+                        >
+                          <Star
+                            size={16}
+                            fill={memo.isImportant ? 'currentColor' : 'none'}
+                          />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMemo(memo.id)}
+                          className="text-gray-300 hover:text-red-500"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => handleToggleImportant(memo.id)}
-                        className={
-                          memo.isImportant ? 'text-yellow-500' : 'text-gray-300'
-                        }
-                      >
-                        <Star
-                          size={16}
-                          fill={memo.isImportant ? 'currentColor' : 'none'}
-                        />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMemo(memo.id)}
-                        className="text-gray-300 hover:text-red-500"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    {/* タグ付け */}
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {tags.map((tag) => {
+                        const hasTag = memo.tagIds.includes(tag.id);
+                        return (
+                          <button
+                            key={tag.id}
+                            onClick={() => handleToggleTag(memo.id, tag.id)}
+                            className={`text-xs px-2 py-0.5 rounded-full border transition-opacity ${hasTag ? 'text-white' : 'opacity-30'}`}
+                            style={{
+                              backgroundColor: hasTag
+                                ? tag.color
+                                : 'transparent',
+                              borderColor: tag.color,
+                              color: hasTag ? 'white' : tag.color,
+                            }}
+                          >
+                            {tag.name}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
