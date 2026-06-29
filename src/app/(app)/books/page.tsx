@@ -147,7 +147,7 @@ export default function BooksPage() {
                   href={`/books/${book.id}`}
                   className="bg-white border border-gray-200 rounded-lg p-4 flex gap-4 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="w-16 h-20 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 flex-shrink-0">
+                  <div className="w-16 h-20 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 shrink-0">
                     No Image
                   </div>
                   <div className="flex-1 min-w-0">
@@ -167,7 +167,7 @@ export default function BooksPage() {
                       {STATUS_LABELS[book.status]}
                     </span>
                   </div>
-                  <div className="flex-shrink-0 flex items-center">
+                  <div className="shrink-0 flex items-center">
                     <Heart
                       size={16}
                       fill={book.isFavorite ? 'currentColor' : 'none'}
@@ -245,7 +245,7 @@ export default function BooksPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <button
                       onClick={() => handleRegister(book)}
                       className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700"
