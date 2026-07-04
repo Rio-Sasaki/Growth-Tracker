@@ -1,12 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Heart, Star, Trash2, Plus, X } from 'lucide-react';
+import Image from 'next/image';
 
 const STATUS_OPTIONS = [
   { value: 0, label: '未読' },
   { value: 1, label: '読書中' },
   { value: 2, label: '読了' },
+];
+
+const TAG_COLORS = [
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
 ];
 
 type Tag = {
@@ -18,51 +28,33 @@ type Tag = {
 type Memo = {
   id: string;
   content: string;
-  isImportant: boolean;
-  pageNumber: string;
-  tagIds: string[];
+  is_important: boolean;
+  page_number: number | null;
+  memo_tags: { tags: Tag }[];
 };
 
-const TAG_COLORS = [
-  '#3B82F6',
-  '#10B981',
-  '#F59E0B',
-  '#EF4444',
-  '#8B5CF6',
-  '#EC4899',
-];
+type UserBook = {
+  id: string;
+  status: number;
+  is_favorite: boolean;
+  started_at: string | null;
+  finished_at: string | null;
+  progress_page: number | null;
+  books: {
+    title: string;
+    author: string | null;
+    thumbnail_url: string | null;
+  };
+};
 
-const dummyTags: Tag[] = [
-  { id: '1', name: '重要', color: '#EF4444' },
-  { id: '2', name: '復習', color: '#3B82F6' },
-  { id: '3', name: '気づき', color: '#10B981' },
-];
+export default function BookDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
 
-const dummyMemos: Memo[] = [
-  {
-    id: '1',
-    content: '抽象化の重要性について',
-    isImportant: true,
-    pageNumber: '32',
-    tagIds: ['1'],
-  },
-  {
-    id: '2',
-    content: '具体と抽象を行き来する思考法',
-    isImportant: false,
-    pageNumber: '56',
-    tagIds: ['2', '3'],
-  },
-  {
-    id: '3',
-    content: 'ピラミッド構造で整理する',
-    isImportant: true,
-    pageNumber: '78',
-    tagIds: [],
-  },
-];
-
-export default function BookDetailPage() {
+  const [userBook, setUserBook] = useState<UserBook | null>(null);
   const [status, setStatus] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [startedAt, setStartedAt] = useState('');
@@ -71,51 +63,109 @@ export default function BookDetailPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const [tags, setTags] = useState<Tag[]>(dummyTags);
-  const [memos, setMemos] = useState<Memo[]>(dummyMemos);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [memos, setMemos] = useState<Memo[]>([]);
   const [showImportantOnly, setShowImportantOnly] = useState(false);
   const [filterTagId, setFilterTagId] = useState<string | null>(null);
   const [newContent, setNewContent] = useState('');
   const [newPageNumber, setNewPageNumber] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
-
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
   const [showTagForm, setShowTagForm] = useState(false);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      const [ubRes, memoRes, tagRes] = await Promise.all([
+        fetch(`/api/user-books/${id}`),
+        fetch(`/api/user-books/${id}/memos`),
+        fetch(`/api/user-books/${id}/tags`),
+      ]);
+
+      const ubData = await ubRes.json();
+      const memoData = await memoRes.json();
+      const tagData = await tagRes.json();
+
+      if (ubData.userBook) {
+        const ub = ubData.userBook;
+        setUserBook(ub);
+        setStatus(ub.status);
+        setIsFavorite(ub.is_favorite);
+        setStartedAt(ub.started_at ? ub.started_at.split('T')[0] : '');
+        setFinishedAt(ub.finished_at ? ub.finished_at.split('T')[0] : '');
+        setProgressPage(ub.progress_page?.toString() ?? '');
+      }
+
+      setMemos(memoData.memos ?? []);
+      setTags(tagData.tags ?? []);
+    };
+
+    fetchData();
+  }, [id]);
+
+  const refreshMemos = async () => {
+    const memoRes = await fetch(`/api/user-books/${id}/memos`);
+    const memoData = await memoRes.json();
+    setMemos(memoData.memos ?? []);
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setMessage('');
-    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    await fetch(`/api/user-books/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status,
+        isFavorite,
+        startedAt,
+        finishedAt,
+        progressPage,
+      }),
+    });
+
     setMessage('保存しました');
     setLoading(false);
   };
 
-  const handleAddMemo = () => {
+  const handleAddMemo = async () => {
     if (!newContent.trim()) return;
-    const newMemo: Memo = {
-      id: Date.now().toString(),
-      content: newContent,
-      isImportant: false,
-      pageNumber: newPageNumber,
-      tagIds: [],
-    };
-    setMemos([...memos, newMemo]);
-    setNewContent('');
-    setNewPageNumber('');
+
+    const res = await fetch(`/api/user-books/${id}/memos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: newContent, pageNumber: newPageNumber }),
+    });
+
+    const data = await res.json();
+    if (data.memo) {
+      await refreshMemos();
+      setNewContent('');
+      setNewPageNumber('');
+    }
   };
 
-  const handleDeleteMemo = (id: string) => {
-    setMemos(memos.filter((m) => m.id !== id));
+  const handleDeleteMemo = async (memoId: string) => {
+    await fetch(`/api/user-books/${id}/memos`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memoId }),
+    });
+    await refreshMemos();
   };
 
-  const handleToggleImportant = (id: string) => {
-    setMemos(
-      memos.map((m) =>
-        m.id === id ? { ...m, isImportant: !m.isImportant } : m
-      )
-    );
+  const handleToggleImportant = async (memo: Memo) => {
+    await fetch(`/api/user-books/${id}/memos`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        memoId: memo.id,
+        isImportant: !memo.is_important,
+      }),
+    });
+    await refreshMemos();
   };
 
   const handleEditStart = (memo: Memo) => {
@@ -123,61 +173,109 @@ export default function BookDetailPage() {
     setEditContent(memo.content);
   };
 
-  const handleEditSave = (id: string) => {
-    setMemos(
-      memos.map((m) => (m.id === id ? { ...m, content: editContent } : m))
-    );
+  const handleEditSave = async (memoId: string) => {
+    await fetch(`/api/user-books/${id}/memos`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memoId, content: editContent }),
+    });
+    await refreshMemos();
     setEditingId(null);
   };
 
-  const handleToggleTag = (memoId: string, tagId: string) => {
-    setMemos(
-      memos.map((m) => {
-        if (m.id !== memoId) return m;
-        const hasTag = m.tagIds.includes(tagId);
-        return {
-          ...m,
-          tagIds: hasTag
-            ? m.tagIds.filter((t) => t !== tagId)
-            : [...m.tagIds, tagId],
-        };
-      })
-    );
+  const handleToggleTag = async (memoId: string, tagId: string) => {
+    const memo = memos.find((m) => m.id === memoId);
+    if (!memo) return;
+
+    const hasTag = memo.memo_tags.some((mt) => mt.tags.id === tagId);
+
+    if (hasTag) {
+      await fetch('/api/memo-tags', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memoId, tagId }),
+      });
+    } else {
+      await fetch('/api/memo-tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memoId, tagId }),
+      });
+    }
+    await refreshMemos();
   };
 
-  const handleAddTag = () => {
+  const handleAddTag = async () => {
     if (!newTagName.trim()) return;
-    const newTag: Tag = {
-      id: Date.now().toString(),
-      name: newTagName,
-      color: newTagColor,
-    };
-    setTags([...tags, newTag]);
-    setNewTagName('');
-    setShowTagForm(false);
+
+    const res = await fetch(`/api/user-books/${id}/tags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newTagName, color: newTagColor }),
+    });
+
+    const data = await res.json();
+    if (data.tag) {
+      setTags([...tags, data.tag]);
+      setNewTagName('');
+      setShowTagForm(false);
+    }
   };
 
-  const handleDeleteTag = (id: string) => {
-    setTags(tags.filter((t) => t.id !== id));
+  const handleDeleteTag = async (tagId: string) => {
+    await fetch(`/api/user-books/${id}/tags`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tagId }),
+    });
+    setTags(tags.filter((t) => t.id !== tagId));
     setMemos(
-      memos.map((m) => ({ ...m, tagIds: m.tagIds.filter((t) => t !== id) }))
+      memos.map((m) => ({
+        ...m,
+        memo_tags: m.memo_tags.filter((mt) => mt.tags.id !== tagId),
+      }))
     );
   };
 
   const filteredMemos = memos
-    .filter((m) => !showImportantOnly || m.isImportant)
-    .filter((m) => !filterTagId || m.tagIds.includes(filterTagId));
+    .filter((m) => !showImportantOnly || m.is_important)
+    .filter(
+      (m) =>
+        !filterTagId || m.memo_tags.some((mt) => mt.tags.id === filterTagId)
+    );
+
+  if (!userBook) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <p className="text-gray-500 text-sm">読み込み中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
-      {/* 書籍情報（仮） */}
+      {/* 書籍情報 */}
       <div className="flex gap-4 mb-6">
-        <div className="w-24 h-32 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
-          No Image
-        </div>
+        {userBook.books.thumbnail_url ? (
+          <Image
+            src={userBook.books.thumbnail_url}
+            alt={userBook.books.title}
+            width={96}
+            height={128}
+            className="object-cover rounded shrink-0"
+          />
+        ) : (
+          <div className="w-24 h-32 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 shrink-0">
+            No Image
+          </div>
+        )}
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-800 mb-1">書籍タイトル</h1>
-          <p className="text-sm text-gray-500 mb-3">著者名</p>
+          <h1 className="text-xl font-bold text-gray-800 mb-1">
+            {userBook.books.title}
+          </h1>
+          <p className="text-sm text-gray-500 mb-3">
+            {userBook.books.author ?? '著者不明'}
+          </p>
           <button
             onClick={() => setIsFavorite(!isFavorite)}
             className={`flex items-center gap-1 text-sm ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
@@ -324,18 +422,16 @@ export default function BookDetailPage() {
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-700">メモ</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowImportantOnly(!showImportantOnly)}
-              className={`text-xs px-3 py-1 rounded-full border ${
-                showImportantOnly
-                  ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
-                  : 'bg-white text-gray-500 border-gray-300'
-              }`}
-            >
-              重要のみ
-            </button>
-          </div>
+          <button
+            onClick={() => setShowImportantOnly(!showImportantOnly)}
+            className={`text-xs px-3 py-1 rounded-full border ${
+              showImportantOnly
+                ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
+                : 'bg-white text-gray-500 border-gray-300'
+            }`}
+          >
+            重要のみ
+          </button>
         </div>
 
         {/* タグフィルター */}
@@ -433,24 +529,24 @@ export default function BookDetailPage() {
                         >
                           {memo.content}
                         </p>
-                        {memo.pageNumber && (
+                        {memo.page_number && (
                           <p className="text-xs text-gray-400 mt-1">
-                            p.{memo.pageNumber}
+                            p.{memo.page_number}
                           </p>
                         )}
                       </div>
                       <div className="flex items-start gap-1 shrink-0">
                         <button
-                          onClick={() => handleToggleImportant(memo.id)}
+                          onClick={() => handleToggleImportant(memo)}
                           className={
-                            memo.isImportant
+                            memo.is_important
                               ? 'text-yellow-500'
                               : 'text-gray-300'
                           }
                         >
                           <Star
                             size={16}
-                            fill={memo.isImportant ? 'currentColor' : 'none'}
+                            fill={memo.is_important ? 'currentColor' : 'none'}
                           />
                         </button>
                         <button
@@ -461,10 +557,11 @@ export default function BookDetailPage() {
                         </button>
                       </div>
                     </div>
-                    {/* タグ付け */}
                     <div className="flex flex-wrap gap-1 mt-2">
                       {tags.map((tag) => {
-                        const hasTag = memo.tagIds.includes(tag.id);
+                        const hasTag = memo.memo_tags.some(
+                          (mt) => mt.tags.id === tag.id
+                        );
                         return (
                           <button
                             key={tag.id}
