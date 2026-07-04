@@ -1,25 +1,70 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
+import { createClient } from '@/lib/supabase-client';
 
 export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [accountName, setAccountName] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const res = await fetch('/api/profile');
+      const data = await res.json();
+
+      if (data.profile) {
+        setAccountName(data.profile.account_name ?? '');
+        setDisplayName(data.profile.display_name ?? '');
+        setBio(data.profile.bio ?? '');
+      }
+      setFetching(false);
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleSave = async () => {
     setLoading(true);
     setMessage('');
+    setError('');
 
-    // TODO: Prismaでプロフィールを更新する処理を実装
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const res = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountName, displayName, bio }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error ?? '保存に失敗しました');
+      setLoading(false);
+      return;
+    }
 
     setMessage('プロフィールを保存しました');
     setLoading(false);
   };
+
+  if (fetching) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <p className="text-gray-500 text-sm">読み込み中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -36,6 +81,7 @@ export default function ProfilePage() {
       </div>
 
       {message && <p className="text-green-600 text-sm mb-4">{message}</p>}
+      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
       {/* フォーム */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">

@@ -3,53 +3,51 @@
 import { useState, useEffect, useRef } from 'react';
 import { Play, Square, RotateCcw, Plus, Pencil, Trash2 } from 'lucide-react';
 
-type StudyRecord = {
+type Category = {
   id: string;
-  category: string;
-  duration_minutes: number;
-  note: string;
-  created_at: string;
+  name: string;
 };
 
-const CATEGORIES = ['プログラミング', '読書', '資格', 'その他'];
-
-const dummyRecords: StudyRecord[] = [
-  {
-    id: '1',
-    category: 'プログラミング',
-    duration_minutes: 90,
-    note: 'Next.jsの学習',
-    created_at: '2026-06-20',
-  },
-  {
-    id: '2',
-    category: '読書',
-    duration_minutes: 45,
-    note: '具体と抽象を読んだ',
-    created_at: '2026-06-19',
-  },
-  {
-    id: '3',
-    category: '資格',
-    duration_minutes: 60,
-    note: '過去問を解いた',
-    created_at: '2026-06-18',
-  },
-];
+type StudyRecord = {
+  id: string;
+  category_id: string | null;
+  categories: Category | null;
+  duration_minutes: number;
+  note: string | null;
+  created_at: string;
+};
 
 export default function StudyPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState('');
   const [note, setNote] = useState('');
   const [manualMinutes, setManualMinutes] = useState('');
   const [tab, setTab] = useState<'timer' | 'manual'>('timer');
 
-  const [records, setRecords] = useState<StudyRecord[]>(dummyRecords);
+  const [records, setRecords] = useState<StudyRecord[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [catRes, studyRes] = await Promise.all([
+        fetch('/api/categories'),
+        fetch('/api/studies'),
+      ]);
+      const catData = await catRes.json();
+      const studyData = await studyRes.json();
+
+      setCategories(catData.categories ?? []);
+      setCategoryId(catData.categories?.[0]?.id ?? '');
+      setRecords(studyData.studies ?? []);
+    };
+    fetchData();
+  }, []);
 
   useEffect(() => {
     if (isRunning) {
@@ -78,42 +76,46 @@ export default function StudyPage() {
     setElapsed(0);
   };
 
-  const handleSaveTimer = () => {
+  const saveStudy = async (durationMinutes: number) => {
+    setLoading(true);
+    const res = await fetch('/api/studies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categoryId, durationMinutes, note }),
+    });
+    const data = await res.json();
+    if (data.study) {
+      setRecords([data.study, ...records]);
+    }
+    setNote('');
+    setLoading(false);
+  };
+
+  const handleSaveTimer = async () => {
     if (elapsed === 0) return;
     const minutes = Math.ceil(elapsed / 60);
-    const newRecord: StudyRecord = {
-      id: Date.now().toString(),
-      category,
-      duration_minutes: minutes,
-      note,
-      created_at: new Date().toISOString().split('T')[0],
-    };
-    setRecords([newRecord, ...records]);
-    setNote('');
+    await saveStudy(minutes);
     handleReset();
   };
 
-  const handleSaveManual = () => {
+  const handleSaveManual = async () => {
     if (!manualMinutes || Number(manualMinutes) <= 0) return;
-    const newRecord: StudyRecord = {
-      id: Date.now().toString(),
-      category,
-      duration_minutes: Number(manualMinutes),
-      note,
-      created_at: new Date().toISOString().split('T')[0],
-    };
-    setRecords([newRecord, ...records]);
-    setNote('');
+    await saveStudy(Number(manualMinutes));
     setManualMinutes('');
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    await fetch('/api/studies', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
     setRecords(records.filter((r) => r.id !== id));
   };
 
   const handleEditStart = (record: StudyRecord) => {
     setEditingId(record.id);
-    setEditNote(record.note);
+    setEditNote(record.note ?? '');
   };
 
   const handleEditSave = (id: string) => {
@@ -192,13 +194,13 @@ export default function StudyPage() {
                 カテゴリ
               </label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -217,7 +219,7 @@ export default function StudyPage() {
             </div>
             <button
               onClick={handleSaveTimer}
-              disabled={elapsed === 0}
+              disabled={elapsed === 0 || loading}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               <Plus size={16} />
@@ -236,13 +238,13 @@ export default function StudyPage() {
                 カテゴリ
               </label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -274,7 +276,7 @@ export default function StudyPage() {
             </div>
             <button
               onClick={handleSaveManual}
-              disabled={!manualMinutes || Number(manualMinutes) <= 0}
+              disabled={!manualMinutes || Number(manualMinutes) <= 0 || loading}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               <Plus size={16} />
@@ -326,7 +328,7 @@ export default function StudyPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                          {record.category}
+                          {record.categories?.name ?? 'カテゴリなし'}
                         </span>
                         <span className="text-sm font-medium text-gray-800">
                           {record.duration_minutes}分
@@ -336,7 +338,9 @@ export default function StudyPage() {
                         <p className="text-xs text-gray-500">{record.note}</p>
                       )}
                       <p className="text-xs text-gray-400 mt-1">
-                        {record.created_at}
+                        {new Date(record.created_at).toLocaleDateString(
+                          'ja-JP'
+                        )}
                       </p>
                     </div>
                     <div className="flex gap-1 shrink-0">

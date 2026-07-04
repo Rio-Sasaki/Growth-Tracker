@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Heart } from 'lucide-react';
 import { searchBooks, GoogleBook } from '@/lib/google-books';
 import Image from 'next/image';
 import Link from 'next/link';
 
 type Tab = 'search' | 'list';
-
 type StatusFilter = 'all' | 0 | 1 | 2;
 
 const STATUS_LABELS: Record<number, string> = {
@@ -16,33 +15,17 @@ const STATUS_LABELS: Record<number, string> = {
   2: '読了',
 };
 
-// ダミーデータ
-const dummyBooks = [
-  {
-    id: '1',
-    title: '具体と抽象',
-    author: '細谷功',
-    thumbnail: null,
-    status: 1,
-    isFavorite: true,
-  },
-  {
-    id: '2',
-    title: 'Clean Code',
-    author: 'Robert C. Martin',
-    thumbnail: null,
-    status: 0,
-    isFavorite: false,
-  },
-  {
-    id: '3',
-    title: '人を動かす',
-    author: 'D・カーネギー',
-    thumbnail: null,
-    status: 2,
-    isFavorite: true,
-  },
-];
+type UserBook = {
+  id: string;
+  status: number;
+  is_favorite: boolean;
+  books: {
+    id: string;
+    title: string;
+    author: string | null;
+    thumbnail_url: string | null;
+  };
+};
 
 export default function BooksPage() {
   const [tab, setTab] = useState<Tab>('list');
@@ -51,6 +34,16 @@ export default function BooksPage() {
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [userBooks, setUserBooks] = useState<UserBook[]>([]);
+
+  useEffect(() => {
+    const fetchBooks = async () => {
+      const res = await fetch('/api/books');
+      const data = await res.json();
+      setUserBooks(data.userBooks ?? []);
+    };
+    fetchBooks();
+  }, []);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -65,16 +58,40 @@ export default function BooksPage() {
   };
 
   const handleRegister = async (book: GoogleBook) => {
-    // TODO: Prismaで書籍を登録する処理を実装
-    alert(`「${book.volumeInfo.title}」を登録しました`);
+    const info = book.volumeInfo;
+    const isbn = info.industryIdentifiers?.find(
+      (i) => i.type === 'ISBN_13'
+    )?.identifier;
+
+    const res = await fetch('/api/books', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        googleBooksId: book.id,
+        title: info.title,
+        author: info.authors?.join(', '),
+        thumbnailUrl: info.imageLinks?.thumbnail,
+        isbn,
+        pageCount: info.pageCount,
+        description: info.description,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setUserBooks((prev) => [data.userBook, ...prev]);
+      alert(`「${info.title}」を登録しました`);
+    } else {
+      alert('登録に失敗しました');
+    }
   };
 
-  const filteredBooks = dummyBooks
-    .filter((book) => statusFilter === 'all' || book.status === statusFilter)
+  const filteredBooks = userBooks
+    .filter((ub) => statusFilter === 'all' || ub.status === statusFilter)
     .filter(
-      (book) =>
-        book.title.includes(searchKeyword) ||
-        book.author.includes(searchKeyword)
+      (ub) =>
+        ub.books.title.includes(searchKeyword) ||
+        (ub.books.author ?? '').includes(searchKeyword)
     );
 
   return (
@@ -108,7 +125,6 @@ export default function BooksPage() {
       {/* 本棚タブ */}
       {tab === 'list' && (
         <div>
-          {/* フィルター・検索 */}
           <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <input
               type="text"
@@ -134,45 +150,56 @@ export default function BooksPage() {
             </select>
           </div>
 
-          {/* 書籍一覧 */}
           <div className="space-y-3">
             {filteredBooks.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-8">
                 該当する書籍がありません
               </p>
             ) : (
-              filteredBooks.map((book) => (
+              filteredBooks.map((ub) => (
                 <Link
-                  key={book.id}
-                  href={`/books/${book.id}`}
+                  key={ub.id}
+                  href={`/books/${ub.id}`}
                   className="bg-white border border-gray-200 rounded-lg p-4 flex gap-4 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="w-16 h-20 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 shrink-0">
-                    No Image
-                  </div>
+                  {ub.books.thumbnail_url ? (
+                    <Image
+                      src={ub.books.thumbnail_url}
+                      alt={ub.books.title}
+                      width={64}
+                      height={80}
+                      className="object-cover rounded shrink-0"
+                    />
+                  ) : (
+                    <div className="w-16 h-20 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 shrink-0">
+                      No Image
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-gray-800 mb-1">
-                      {book.title}
+                      {ub.books.title}
                     </h3>
-                    <p className="text-xs text-gray-500 mb-2">{book.author}</p>
+                    <p className="text-xs text-gray-500 mb-2">
+                      {ub.books.author ?? '著者不明'}
+                    </p>
                     <span
                       className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                        book.status === 1
+                        ub.status === 1
                           ? 'bg-blue-100 text-blue-600'
-                          : book.status === 2
+                          : ub.status === 2
                             ? 'bg-green-100 text-green-600'
                             : 'bg-gray-100 text-gray-600'
                       }`}
                     >
-                      {STATUS_LABELS[book.status]}
+                      {STATUS_LABELS[ub.status]}
                     </span>
                   </div>
                   <div className="shrink-0 flex items-center">
                     <Heart
                       size={16}
-                      fill={book.isFavorite ? 'currentColor' : 'none'}
+                      fill={ub.is_favorite ? 'currentColor' : 'none'}
                       className={
-                        book.isFavorite ? 'text-red-500' : 'text-gray-300'
+                        ub.is_favorite ? 'text-red-500' : 'text-gray-300'
                       }
                     />
                   </div>
