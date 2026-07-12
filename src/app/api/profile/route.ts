@@ -12,8 +12,10 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.findUnique({
+  const profile = await prisma.profiles.upsert({
     where: { user_id: user.id },
+    update: {},
+    create: { user_id: user.id },
   });
 
   return NextResponse.json({ profile });

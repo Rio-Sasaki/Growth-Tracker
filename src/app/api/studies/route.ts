@@ -12,13 +12,11 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.findUnique({
+  const profile = await prisma.profiles.upsert({
     where: { user_id: user.id },
+    update: {},
+    create: { user_id: user.id },
   });
-
-  if (!profile) {
-    return NextResponse.json({ studies: [] });
-  }
 
   const studies = await prisma.studies.findMany({
     where: { profile_id: profile.id },
@@ -39,16 +37,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.findUnique({
+  const profile = await prisma.profiles.upsert({
     where: { user_id: user.id },
+    update: {},
+    create: { user_id: user.id },
   });
-
-  if (!profile) {
-    return NextResponse.json(
-      { error: 'プロフィールが見つかりません' },
-      { status: 404 }
-    );
-  }
 
   const { categoryId, durationMinutes, note } = await request.json();
 
