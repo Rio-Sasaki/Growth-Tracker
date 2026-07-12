@@ -1,19 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Heart } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { searchBooks, GoogleBook } from '@/lib/google-books';
 import Image from 'next/image';
-import Link from 'next/link';
+import BookCard from '@/components/books/BookCard';
 
 type Tab = 'search' | 'list';
 type StatusFilter = 'all' | 0 | 1 | 2;
-
-const STATUS_LABELS: Record<number, string> = {
-  0: '未読',
-  1: '読書中',
-  2: '読了',
-};
 
 type UserBook = {
   id: string;
@@ -157,53 +151,15 @@ export default function BooksPage() {
               </p>
             ) : (
               filteredBooks.map((ub) => (
-                <Link
+                <BookCard
                   key={ub.id}
-                  href={`/books/${ub.id}`}
-                  className="bg-white border border-gray-200 rounded-lg p-4 flex gap-4 hover:bg-gray-50 transition-colors"
-                >
-                  {ub.books.thumbnail_url ? (
-                    <Image
-                      src={ub.books.thumbnail_url}
-                      alt={ub.books.title}
-                      width={64}
-                      height={80}
-                      className="object-cover rounded shrink-0"
-                    />
-                  ) : (
-                    <div className="w-16 h-20 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 shrink-0">
-                      No Image
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-800 mb-1">
-                      {ub.books.title}
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-2">
-                      {ub.books.author ?? '著者不明'}
-                    </p>
-                    <span
-                      className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                        ub.status === 1
-                          ? 'bg-blue-100 text-blue-600'
-                          : ub.status === 2
-                            ? 'bg-green-100 text-green-600'
-                            : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {STATUS_LABELS[ub.status]}
-                    </span>
-                  </div>
-                  <div className="shrink-0 flex items-center">
-                    <Heart
-                      size={16}
-                      fill={ub.is_favorite ? 'currentColor' : 'none'}
-                      className={
-                        ub.is_favorite ? 'text-red-500' : 'text-gray-300'
-                      }
-                    />
-                  </div>
-                </Link>
+                  id={ub.id}
+                  title={ub.books.title}
+                  author={ub.books.author}
+                  thumbnailUrl={ub.books.thumbnail_url}
+                  status={ub.status}
+                  isFavorite={ub.is_favorite}
+                />
               ))
             )}
           </div>

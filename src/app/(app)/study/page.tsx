@@ -1,20 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, RotateCcw, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Play, Square, RotateCcw, Plus } from 'lucide-react';
+import StudyRecordCard, { StudyRecord } from '@/components/study/StudyRecord';
 
 type Category = {
   id: string;
   name: string;
-};
-
-type StudyRecord = {
-  id: string;
-  category_id: string | null;
-  categories: Category | null;
-  duration_minutes: number;
-  note: string | null;
-  created_at: string;
 };
 
 export default function StudyPage() {
@@ -295,12 +287,12 @@ export default function StudyPage() {
               学習記録がありません
             </p>
           ) : (
-            records.map((record) => (
-              <div
-                key={record.id}
-                className="border border-gray-100 rounded-lg p-3 bg-gray-50"
-              >
-                {editingId === record.id ? (
+            records.map((record) =>
+              editingId === record.id ? (
+                <div
+                  key={record.id}
+                  className="border border-gray-100 rounded-lg p-3 bg-gray-50"
+                >
                   <div className="space-y-2">
                     <input
                       type="text"
@@ -323,44 +315,16 @@ export default function StudyPage() {
                       </button>
                     </div>
                   </div>
-                ) : (
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                          {record.categories?.name ?? 'カテゴリなし'}
-                        </span>
-                        <span className="text-sm font-medium text-gray-800">
-                          {record.duration_minutes}分
-                        </span>
-                      </div>
-                      {record.note && (
-                        <p className="text-xs text-gray-500">{record.note}</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">
-                        {new Date(record.created_at).toLocaleDateString(
-                          'ja-JP'
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button
-                        onClick={() => handleEditStart(record)}
-                        className="text-gray-400 hover:text-blue-600"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(record.id)}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))
+                </div>
+              ) : (
+                <StudyRecordCard
+                  key={record.id}
+                  record={record}
+                  onEditStart={handleEditStart}
+                  onDelete={handleDelete}
+                />
+              )
+            )
           )}
         </div>
       </div>
