@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts';
+import SummaryCard from '@/components/dashboard/SummaryCard';
 
 type WeeklyData = {
   day: string;
@@ -65,30 +66,23 @@ export default function DashboardPage() {
 
       {/* サマリーカード */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 mb-1">今月の学習時間</p>
-          <p className="text-2xl font-bold text-blue-600">
-            {formatHours(data.totalMinutesThisMonth)}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 mb-1">今月の読書冊数</p>
-          <p className="text-2xl font-bold text-blue-600">
-            {data.booksThisMonth}冊
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 mb-1">連続学習日数</p>
-          <p className="text-2xl font-bold text-green-500">
-            {data.streak}日{data.streak > 0 ? '🔥' : ''}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-          <p className="text-xs text-gray-500 mb-1">総学習時間</p>
-          <p className="text-2xl font-bold text-blue-600">
-            {formatHours(data.totalMinutesAll)}
-          </p>
-        </div>
+        <SummaryCard
+          label="今月の学習時間"
+          value={formatHours(data.totalMinutesThisMonth)}
+        />
+        <SummaryCard
+          label="今月の読書冊数"
+          value={`${data.booksThisMonth}冊`}
+        />
+        <SummaryCard
+          label="連続学習日数"
+          value={`${data.streak}日${data.streak > 0 ? '🔥' : ''}`}
+          color="green"
+        />
+        <SummaryCard
+          label="総学習時間"
+          value={formatHours(data.totalMinutesAll)}
+        />
       </div>
 
       {/* 日別学習時間グラフ */}

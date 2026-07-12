@@ -26,10 +26,17 @@ body {
 }
 
 /* Recharts */
-.recharts-wrapper:focus,
-.recharts-surface:focus,
-.recharts-rectangle:focus,
-.recharts-layer:focus,
-svg:focus {
+.recharts-wrapper *:focus {
   outline: none;
+}
+
+.recharts-bar-rectangle:focus,
+.recharts-bar-rectangle path:focus,
+.recharts-rectangle:focus {
+  outline: none;
+  stroke: inherit;
+}
+
+svg .recharts-layer path {
+  stroke: inherit;
 }
