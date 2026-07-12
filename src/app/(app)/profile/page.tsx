@@ -1,26 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { User } from 'lucide-react';
-import { createClient } from '@/lib/supabase-client';
+import { useState, useEffect, useRef } from 'react';
+import { User, Pencil, X } from 'lucide-react';
+import Image from 'next/image';
 
 export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [accountName, setAccountName] = useState('');
   const [bio, setBio] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
       const res = await fetch('/api/profile');
       const data = await res.json();
 
@@ -28,6 +25,7 @@ export default function ProfilePage() {
         setAccountName(data.profile.account_name ?? '');
         setDisplayName(data.profile.display_name ?? '');
         setBio(data.profile.bio ?? '');
+        setAvatarUrl(data.profile.avatar_url ?? null);
       }
       setFetching(false);
     };
@@ -58,6 +56,55 @@ export default function ProfilePage() {
     setLoading(false);
   };
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError('');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch('/api/avatar', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error ?? '画像のアップロードに失敗しました');
+      setUploading(false);
+      return;
+    }
+
+    setAvatarUrl(data.avatarUrl);
+    setUploading(false);
+  };
+
+  const handleDeleteAvatar = async () => {
+    setUploading(true);
+    setError('');
+
+    const res = await fetch('/api/avatar', {
+      method: 'DELETE',
+    });
+
+    if (!res.ok) {
+      setError('画像の削除に失敗しました');
+      setUploading(false);
+      return;
+    }
+
+    setAvatarUrl(null);
+    setUploading(false);
+  };
+
   if (fetching) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
@@ -72,12 +119,52 @@ export default function ProfilePage() {
 
       {/* アバター */}
       <div className="flex flex-col items-center gap-2 mb-8">
-        <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
-          <User size={36} className="text-gray-400" />
+        <div className="relative group">
+          <div
+            className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200 overflow-hidden cursor-pointer"
+            onClick={handleAvatarClick}
+          >
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt="アバター"
+                width={80}
+                height={80}
+                className="object-cover w-full h-full"
+                loading="eager"
+              />
+            ) : (
+              <User size={36} className="text-gray-400" />
+            )}
+          </div>
+          {/* ホバー時オーバーレイ */}
+          <div
+            className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            onClick={handleAvatarClick}
+          >
+            <Pencil size={18} className="text-white" />
+          </div>
+          {/* 削除ボタン */}
+          {avatarUrl && (
+            <button
+              onClick={handleDeleteAvatar}
+              disabled={uploading}
+              className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 disabled:opacity-50"
+            >
+              <X size={12} className="text-white" />
+            </button>
+          )}
         </div>
-        <button className="text-sm text-blue-600 hover:underline">
-          画像を変更
-        </button>
+        {uploading && (
+          <p className="text-xs text-gray-500">アップロード中...</p>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
 
       {message && <p className="text-green-600 text-sm mb-4">{message}</p>}
