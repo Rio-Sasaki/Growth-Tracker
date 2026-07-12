@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Pencil, X } from 'lucide-react';
+import { User, Pencil, X, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 
 export default function ProfilePage() {
@@ -14,6 +14,8 @@ export default function ProfilePage() {
   const [fetching, setFetching] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [accountNameError, setAccountNameError] = useState('');
+  const [isAccountNameAvailable, setIsAccountNameAvailable] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -33,7 +35,36 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
+  useEffect(() => {
+    if (!accountName.trim()) {
+      const timer = setTimeout(() => {
+        setAccountNameError('');
+        setIsAccountNameAvailable(true);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    const timer = setTimeout(async () => {
+      const res = await fetch(
+        `/api/check-account-name?name=${encodeURIComponent(accountName)}`
+      );
+      const data = await res.json();
+
+      if (!data.available) {
+        setAccountNameError('このアカウント名はすでに使用されています');
+        setIsAccountNameAvailable(false);
+      } else {
+        setAccountNameError('');
+        setIsAccountNameAvailable(true);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [accountName]);
+
   const handleSave = async () => {
+    if (!isAccountNameAvailable) return;
+
     setLoading(true);
     setMessage('');
     setError('');
@@ -53,6 +84,7 @@ export default function ProfilePage() {
     }
 
     setMessage('プロフィールを保存しました');
+    setTimeout(() => setMessage(''), 3000);
     setLoading(false);
   };
 
@@ -117,6 +149,16 @@ export default function ProfilePage() {
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">プロフィール</h1>
 
+      {/* トースト通知 */}
+      {message && (
+        <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50">
+          <div className="bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <CheckCircle size={16} />
+            <span className="text-sm font-medium">{message}</span>
+          </div>
+        </div>
+      )}
+
       {/* アバター */}
       <div className="flex flex-col items-center gap-2 mb-8">
         <div className="relative group">
@@ -137,14 +179,12 @@ export default function ProfilePage() {
               <User size={36} className="text-gray-400" />
             )}
           </div>
-          {/* ホバー時オーバーレイ */}
           <div
             className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
             onClick={handleAvatarClick}
           >
             <Pencil size={18} className="text-white" />
           </div>
-          {/* 削除ボタン */}
           {avatarUrl && (
             <button
               onClick={handleDeleteAvatar}
@@ -167,7 +207,6 @@ export default function ProfilePage() {
         />
       </div>
 
-      {message && <p className="text-green-600 text-sm mb-4">{message}</p>}
       {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
       {/* フォーム */}
@@ -179,10 +218,20 @@ export default function ProfilePage() {
           <input
             type="text"
             value={accountName}
-            onChange={(e) => setAccountName(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => {
+              setAccountName(e.target.value);
+              setMessage('');
+            }}
+            className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+              accountNameError
+                ? 'border-red-400 focus:ring-red-400'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
             placeholder="account_name"
           />
+          {accountNameError && (
+            <p className="text-red-500 text-xs mt-1">{accountNameError}</p>
+          )}
         </div>
 
         <div>
@@ -213,8 +262,8 @@ export default function ProfilePage() {
 
         <button
           onClick={handleSave}
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          disabled={loading || !isAccountNameAvailable}
+          className="w-full bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? '保存中...' : '保存する'}
         </button>
