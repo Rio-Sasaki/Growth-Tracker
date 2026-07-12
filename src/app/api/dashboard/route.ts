@@ -41,7 +41,7 @@ export async function GET() {
     where: {
       profile_id: profile.id,
       status: 2,
-      updated_at: { gte: startOfMonth },
+      finished_at: { gte: startOfMonth },
     },
   });
 
