@@ -12,13 +12,11 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.findUnique({
+  const profile = await prisma.profiles.upsert({
     where: { user_id: user.id },
+    update: {},
+    create: { user_id: user.id },
   });
-
-  if (!profile) {
-    return NextResponse.json({ userBooks: [] });
-  }
 
   const userBooks = await prisma.user_books.findMany({
     where: { profile_id: profile.id },
@@ -39,16 +37,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.findUnique({
+  const profile = await prisma.profiles.upsert({
     where: { user_id: user.id },
+    update: {},
+    create: { user_id: user.id },
   });
-
-  if (!profile) {
-    return NextResponse.json(
-      { error: 'プロフィールが見つかりません' },
-      { status: 404 }
-    );
-  }
 
   const {
     googleBooksId,
@@ -60,7 +53,6 @@ export async function POST(request: NextRequest) {
     description,
   } = await request.json();
 
-  // 書籍をupsert（同じgoogle_books_idがあれば使い回す）
   const book = await prisma.books.upsert({
     where: { google_books_id: googleBooksId ?? '' },
     update: {},
@@ -75,7 +67,6 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // user_booksに登録
   const userBook = await prisma.user_books.create({
     data: {
       profile_id: profile.id,

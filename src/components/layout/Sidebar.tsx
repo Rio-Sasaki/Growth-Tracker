@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Timer, User, Sprout } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, BookOpen, Timer, User, Sprout, LogOut } from 'lucide-react';
+import { createClient } from '@/lib/supabase-client';
 
 const navItems = [
   { href: '/dashboard', label: 'ホーム', icon: Home },
@@ -13,6 +14,13 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   return (
     <aside className="hidden md:flex flex-col w-56 min-h-screen bg-white border-r border-gray-200 p-4">
@@ -22,7 +30,7 @@ export default function Sidebar() {
           <Sprout size={18} className="text-green-500" />
         </h1>
       </div>
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-col gap-1 flex-1">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -42,6 +50,13 @@ export default function Sidebar() {
           );
         })}
       </nav>
+      <button
+        onClick={handleLogout}
+        className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100 mt-auto"
+      >
+        <LogOut size={18} />
+        <span>ログアウト</span>
+      </button>
     </aside>
   );
 }
