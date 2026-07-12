@@ -24,6 +24,7 @@ export default function StudyPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -116,6 +117,10 @@ export default function StudyPage() {
     );
     setEditingId(null);
   };
+
+  const filteredRecords = filterCategoryId
+    ? records.filter((r) => r.category_id === filterCategoryId)
+    : records;
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -280,14 +285,46 @@ export default function StudyPage() {
 
       {/* 学習記録一覧 */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-base font-semibold text-gray-700 mb-4">学習記録</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-700">学習記録</h2>
+        </div>
+
+        {/* カテゴリフィルター */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setFilterCategoryId(null)}
+            className={`text-xs px-3 py-1 rounded-full border ${
+              !filterCategoryId
+                ? 'bg-gray-800 text-white border-gray-800'
+                : 'bg-white text-gray-500 border-gray-300'
+            }`}
+          >
+            すべて
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              onClick={() =>
+                setFilterCategoryId(filterCategoryId === c.id ? null : c.id)
+              }
+              className={`text-xs px-3 py-1 rounded-full border ${
+                filterCategoryId === c.id
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-500 border-gray-300'
+              }`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+
         <div className="space-y-3">
-          {records.length === 0 ? (
+          {filteredRecords.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">
               学習記録がありません
             </p>
           ) : (
-            records.map((record) =>
+            filteredRecords.map((record) =>
               editingId === record.id ? (
                 <div
                   key={record.id}
