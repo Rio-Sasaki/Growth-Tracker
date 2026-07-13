@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabaseAuth } from '@/lib/supabase-auth';
+import { createClient } from '@/lib/supabase-client';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -15,10 +15,29 @@ export default function SignUpPage() {
     setLoading(true);
     setError('');
 
-    const { error } = await supabaseAuth.auth.signUp({ email, password });
+    const supabase = createClient();
 
-    if (error) {
-      setError(error.message);
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    // 登録後に自動でログイン
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      setError(
+        '登録は完了しましたが、ログインに失敗しました。ログイン画面からログインしてください。'
+      );
       setLoading(false);
       return;
     }
