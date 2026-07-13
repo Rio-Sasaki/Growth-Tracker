@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
 import BookInfo from '@/components/books/BookInfo';
 import ReadingStatus from '@/components/books/ReadingStatus';
 import TagManager, { Tag } from '@/components/books/TagManager';
@@ -26,6 +27,7 @@ export default function BookDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
 
   const [userBook, setUserBook] = useState<UserBook | null>(null);
   const [status, setStatus] = useState(0);
@@ -91,6 +93,13 @@ export default function BookDetailPage({
 
     setMessage('保存しました');
     setLoading(false);
+  };
+
+  const handleDelete = async () => {
+    await fetch(`/api/user-books/${id}`, {
+      method: 'DELETE',
+    });
+    router.push('/books');
   };
 
   const handleToggleFavorite = async () => {
@@ -229,6 +238,7 @@ export default function BookDetailPage({
         onFinishedAtChange={setFinishedAt}
         onProgressPageChange={setProgressPage}
         onSave={handleSave}
+        onDelete={handleDelete}
       />
 
       <TagManager

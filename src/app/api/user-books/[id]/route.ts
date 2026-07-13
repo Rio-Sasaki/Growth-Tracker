@@ -61,3 +61,24 @@ export async function PUT(
 
   return NextResponse.json({ userBook });
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: '未認証' }, { status: 401 });
+  }
+
+  await prisma.user_books.delete({
+    where: { id },
+  });
+
+  return NextResponse.json({ success: true });
+}
