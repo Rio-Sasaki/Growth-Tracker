@@ -1,3 +1,5 @@
+import { Trash2 } from 'lucide-react';
+
 const STATUS_OPTIONS = [
   { value: 0, label: '未読' },
   { value: 1, label: '読書中' },
@@ -16,6 +18,7 @@ type Props = {
   onFinishedAtChange: (value: string) => void;
   onProgressPageChange: (value: string) => void;
   onSave: () => void;
+  onDelete: () => void;
 };
 
 export default function ReadingStatus({
@@ -30,7 +33,14 @@ export default function ReadingStatus({
   onFinishedAtChange,
   onProgressPageChange,
   onSave,
+  onDelete,
 }: Props) {
+  const handleDelete = () => {
+    if (confirm('この書籍を本棚から削除しますか？')) {
+      onDelete();
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 mb-6">
       {message && <p className="text-green-600 text-sm">{message}</p>}
@@ -100,6 +110,14 @@ export default function ReadingStatus({
         className="w-full bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
       >
         {loading ? '保存中...' : '保存する'}
+      </button>
+
+      <button
+        onClick={handleDelete}
+        className="w-full flex items-center justify-center gap-2 border border-red-300 text-red-500 py-2 rounded-md text-sm font-medium hover:bg-red-50"
+      >
+        <Trash2 size={14} />
+        本棚から削除
       </button>
     </div>
   );
