@@ -67,6 +67,21 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  // 既に登録済みか確認
+  const existing = await prisma.user_books.findFirst({
+    where: {
+      profile_id: profile.id,
+      book_id: book.id,
+    },
+  });
+
+  if (existing) {
+    return NextResponse.json(
+      { error: 'この書籍はすでに本棚に登録されています' },
+      { status: 409 }
+    );
+  }
+
   const userBook = await prisma.user_books.create({
     data: {
       profile_id: profile.id,

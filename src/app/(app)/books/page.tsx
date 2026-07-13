@@ -18,6 +18,7 @@ type UserBook = {
     title: string;
     author: string | null;
     thumbnail_url: string | null;
+    google_books_id: string | null;
   };
 };
 
@@ -71,13 +72,24 @@ export default function BooksPage() {
       }),
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      setUserBooks((prev) => [data.userBook, ...prev]);
-      alert(`「${info.title}」を登録しました`);
-    } else {
-      alert('登録に失敗しました');
+    const data = await res.json();
+
+    if (res.status === 409) {
+      alert('この書籍はすでに本棚に登録されています');
+      return;
     }
+
+    if (!res.ok) {
+      alert('登録に失敗しました');
+      return;
+    }
+
+    setUserBooks((prev) => [data.userBook, ...prev]);
+    alert(`「${info.title}」を登録しました`);
+  };
+
+  const isRegistered = (book: GoogleBook) => {
+    return userBooks.some((ub) => ub.books.google_books_id === book.id);
   };
 
   const filteredBooks = userBooks
@@ -198,6 +210,7 @@ export default function BooksPage() {
               const info = book.volumeInfo;
               const thumbnail = info.imageLinks?.thumbnail;
               const author = info.authors?.join(', ') ?? '著者不明';
+              const registered = isRegistered(book);
 
               return (
                 <div
@@ -229,12 +242,21 @@ export default function BooksPage() {
                     )}
                   </div>
                   <div className="shrink-0">
-                    <button
-                      onClick={() => handleRegister(book)}
-                      className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700"
-                    >
-                      登録
-                    </button>
+                    {registered ? (
+                      <button
+                        disabled
+                        className="bg-gray-200 text-gray-500 px-3 py-1.5 rounded text-xs font-medium cursor-not-allowed"
+                      >
+                        登録済み
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleRegister(book)}
+                        className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700"
+                      >
+                        登録
+                      </button>
+                    )}
                   </div>
                 </div>
               );
