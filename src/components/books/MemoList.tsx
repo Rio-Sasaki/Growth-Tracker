@@ -15,7 +15,11 @@ export type Memo = {
 type Props = {
   memos: Memo[];
   tags: Tag[];
-  onAddMemo: (content: string, pageNumber: string) => Promise<void>;
+  onAddMemo: (
+    content: string,
+    pageNumber: string,
+    tagIds: string[]
+  ) => Promise<void>;
   onDeleteMemo: (memoId: string) => void;
   onToggleImportant: (memo: Memo) => void;
   onEditMemo: (memoId: string, content: string) => void;
@@ -31,7 +35,6 @@ export default function MemoList({
   onEditMemo,
   onToggleTag,
 }: Props) {
-  const [showImportantOnly, setShowImportantOnly] = useState(false);
   const [filterTagId, setFilterTagId] = useState<string | null>(null);
   const [newContent, setNewContent] = useState('');
   const [newPageNumber, setNewPageNumber] = useState('');
@@ -48,34 +51,25 @@ export default function MemoList({
     setEditingId(null);
   };
 
-  const filteredMemos = memos
-    .filter((m) => !showImportantOnly || m.is_important)
-    .filter(
-      (m) =>
-        !filterTagId || m.memo_tags.some((mt) => mt.tags.id === filterTagId)
-    );
+  const filteredMemos = memos.filter(
+    (m) => !filterTagId || m.memo_tags.some((mt) => mt.tags.id === filterTagId)
+  );
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold text-gray-700">メモ</h2>
-        <button
-          onClick={() => setShowImportantOnly(!showImportantOnly)}
-          className={`text-xs px-3 py-1 rounded-full border ${
-            showImportantOnly
-              ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
-              : 'bg-white text-gray-500 border-gray-300'
-          }`}
-        >
-          重要のみ
-        </button>
       </div>
 
       {/* タグフィルター */}
       <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setFilterTagId(null)}
-          className={`text-xs px-3 py-1 rounded-full border ${!filterTagId ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-300'}`}
+          className={`text-xs px-3 py-1 rounded-full border ${
+            !filterTagId
+              ? 'bg-gray-800 text-white border-gray-800'
+              : 'bg-white text-gray-500 border-gray-300'
+          }`}
         >
           すべて
         </button>
@@ -85,7 +79,9 @@ export default function MemoList({
             onClick={() =>
               setFilterTagId(filterTagId === tag.id ? null : tag.id)
             }
-            className={`text-xs px-3 py-1 rounded-full border text-white ${filterTagId === tag.id ? 'opacity-100' : 'opacity-60'}`}
+            className={`text-xs px-3 py-1 rounded-full border text-white ${
+              filterTagId === tag.id ? 'opacity-100' : 'opacity-60'
+            }`}
             style={{ backgroundColor: tag.color, borderColor: tag.color }}
           >
             {tag.name}
@@ -113,7 +109,8 @@ export default function MemoList({
           />
           <button
             onClick={async () => {
-              await onAddMemo(newContent, newPageNumber);
+              const tagIds = filterTagId ? [filterTagId] : [];
+              await onAddMemo(newContent, newPageNumber, tagIds);
               setNewContent('');
               setNewPageNumber('');
             }}
@@ -207,7 +204,9 @@ export default function MemoList({
                         <button
                           key={tag.id}
                           onClick={() => onToggleTag(memo.id, tag.id)}
-                          className={`text-xs px-2 py-0.5 rounded-full border transition-opacity ${hasTag ? 'text-white' : 'opacity-30'}`}
+                          className={`text-xs px-2 py-0.5 rounded-full border transition-opacity ${
+                            hasTag ? 'text-white' : 'opacity-30'
+                          }`}
                           style={{
                             backgroundColor: hasTag ? tag.color : 'transparent',
                             borderColor: tag.color,
