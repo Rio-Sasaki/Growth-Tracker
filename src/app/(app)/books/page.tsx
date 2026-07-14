@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Star } from 'lucide-react';
 import { searchBooks, GoogleBook } from '@/lib/google-books';
 import Image from 'next/image';
 import BookCard from '@/components/books/BookCard';
+import ImportantMemoList from '@/components/books/ImportantMemoList';
 
-type Tab = 'search' | 'list';
+type Tab = 'search' | 'list' | 'important';
 type StatusFilter = 'all' | 0 | 1 | 2;
 
 type UserBook = {
@@ -22,6 +23,20 @@ type UserBook = {
   };
 };
 
+type ImportantMemo = {
+  id: string;
+  content: string;
+  page_number: number | null;
+  memo_tags: { tags: { id: string; name: string; color: string } }[];
+  user_books: {
+    id: string;
+    books: {
+      title: string;
+      thumbnail_url: string | null;
+    };
+  };
+};
+
 export default function BooksPage() {
   const [tab, setTab] = useState<Tab>('list');
   const [query, setQuery] = useState('');
@@ -30,6 +45,7 @@ export default function BooksPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [userBooks, setUserBooks] = useState<UserBook[]>([]);
+  const [importantMemos, setImportantMemos] = useState<ImportantMemo[]>([]);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -39,6 +55,17 @@ export default function BooksPage() {
     };
     fetchBooks();
   }, []);
+
+  useEffect(() => {
+    if (tab === 'important') {
+      const fetchImportantMemos = async () => {
+        const res = await fetch('/api/important-memos');
+        const data = await res.json();
+        setImportantMemos(data.memos ?? []);
+      };
+      fetchImportantMemos();
+    }
+  }, [tab]);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -125,6 +152,17 @@ export default function BooksPage() {
           }`}
         >
           書籍を探す
+        </button>
+        <button
+          onClick={() => setTab('important')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1 ${
+            tab === 'important'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Star size={14} />
+          重要メモ
         </button>
       </div>
 
@@ -264,6 +302,9 @@ export default function BooksPage() {
           </div>
         </div>
       )}
+
+      {/* 重要メモタブ */}
+      {tab === 'important' && <ImportantMemoList memos={importantMemos} />}
     </div>
   );
 }

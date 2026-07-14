@@ -113,7 +113,11 @@ export default function BookDetailPage({
     });
   };
 
-  const handleAddMemo = async (content: string, pageNumber: string) => {
+  const handleAddMemo = async (
+    content: string,
+    pageNumber: string,
+    tagIds: string[]
+  ) => {
     if (!content.trim()) return;
 
     const res = await fetch(`/api/user-books/${id}/memos`, {
@@ -124,6 +128,15 @@ export default function BookDetailPage({
 
     const data = await res.json();
     if (data.memo) {
+      await Promise.all(
+        tagIds.map((tagId) =>
+          fetch('/api/memo-tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memoId: data.memo.id, tagId }),
+          })
+        )
+      );
       await refreshMemos();
     }
   };
