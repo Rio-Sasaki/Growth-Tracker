@@ -42,49 +42,51 @@
 
 ---
 
+## アーキテクチャ図
+
+![アーキテクチャ図](docs/images/architecture.png)
+
+---
+
 ## ER図
 
 ```mermaid
 erDiagram
   users {
     uuid id PK
-    varchar(254) email
-    varchar(255) encrypted_password
+    varchar email
+    varchar encrypted_password
     timestamp created_at
     timestamp updated_at
   }
-
   profiles {
     uuid id PK
     uuid user_id FK
-    varchar(50) account_name
-    varchar(50) display_name
+    varchar account_name
+    varchar display_name
     text bio
     text avatar_url
     timestamp created_at
     timestamp updated_at
   }
-
   categories {
     uuid id PK
-    varchar(50) name
+    varchar name
     timestamp created_at
     timestamp updated_at
   }
-
   books {
     uuid id PK
-    varchar(20) google_books_id
+    varchar google_books_id
     text title
-    varchar(100) author
+    varchar author
     text thumbnail_url
-    varchar(13) isbn
+    varchar isbn
     int page_count
     text description
     timestamp created_at
     timestamp updated_at
   }
-
   user_books {
     uuid id PK
     uuid profile_id FK
@@ -97,7 +99,6 @@ erDiagram
     timestamp created_at
     timestamp updated_at
   }
-
   memos {
     uuid id PK
     uuid user_book_id FK
@@ -107,23 +108,20 @@ erDiagram
     timestamp created_at
     timestamp updated_at
   }
-
   tags {
     uuid id PK
     uuid profile_id FK
-    varchar(50) name
-    varchar(7) color
+    varchar name
+    varchar color
     timestamp created_at
     timestamp updated_at
   }
-
   memo_tags {
     uuid memo_id FK
     uuid tag_id FK
     timestamp created_at
     timestamp updated_at
   }
-
   studies {
     uuid id PK
     uuid profile_id FK
@@ -158,8 +156,6 @@ erDiagram
 
 ---
 
----
-
 ## 外部API
 
 | API | 用途 |
@@ -167,8 +163,6 @@ erDiagram
 | Google Books API | 書籍検索・書影取得 |
 | Supabase Auth | メール・Google認証 |
 | Supabase Storage | アバター画像の保存 |
-
----
 
 ---
 
