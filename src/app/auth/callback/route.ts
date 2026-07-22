@@ -6,9 +6,6 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
 
-  console.log('callback reached, code:', code);
-  console.log('full URL:', request.url);
-
   if (code) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -29,9 +26,6 @@ export async function GET(request: NextRequest) {
     );
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    console.log('exchangeCodeForSession data:', data);
-    console.log('exchangeCodeForSession error:', error);
-
     if (!error) {
       return NextResponse.redirect(`${origin}/dashboard`);
     }
