@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { searchBooks, GoogleBook } from '@/lib/google-books';
 import Image from 'next/image';
 import BookCard from '@/components/books/BookCard';
 import ImportantMemoList from '@/components/books/ImportantMemoList';
+import Toast from '@/components/ui/Toast';
+import SearchInput from '@/components/ui/SearchInput';
 
 type Tab = 'search' | 'list' | 'important';
-type StatusFilter = 'all' | 0 | 1 | 2;
+type StatusFilter = 0 | 1 | 2 | -1;
 
 type UserBook = {
   id: string;
@@ -37,15 +39,31 @@ type ImportantMemo = {
   };
 };
 
+type ToastState = {
+  message: string;
+  type: 'success' | 'error';
+} | null;
+
+const STATUS_FILTERS: [StatusFilter, string][] = [
+  [-1, 'すべて'],
+  [0, '未読'],
+  [1, '読書中'],
+  [2, '読了'],
+];
+
 export default function BooksPage() {
   const [tab, setTab] = useState<Tab>('list');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GoogleBook[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(-1);
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchKeywordInput, setSearchKeywordInput] = useState('');
+  const [filterLoading, setFilterLoading] = useState(false);
   const [userBooks, setUserBooks] = useState<UserBook[]>([]);
   const [importantMemos, setImportantMemos] = useState<ImportantMemo[]>([]);
+  const [registeringId, setRegisteringId] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -69,14 +87,16 @@ export default function BooksPage() {
 
   const handleSearch = async () => {
     if (!query.trim()) return;
-    setLoading(true);
+    setSearchLoading(true);
     const books = await searchBooks(query);
     setResults(books);
-    setLoading(false);
+    setSearchLoading(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSearch();
+  const handleFilterSearch = async () => {
+    setFilterLoading(true);
+    setSearchKeyword(searchKeywordInput);
+    setFilterLoading(false);
   };
 
   const handleRegister = async (book: GoogleBook) => {
@@ -84,6 +104,8 @@ export default function BooksPage() {
     const isbn = info.industryIdentifiers?.find(
       (i) => i.type === 'ISBN_13'
     )?.identifier;
+
+    setRegisteringId(book.id);
 
     const res = await fetch('/api/books', {
       method: 'POST',
@@ -100,19 +122,23 @@ export default function BooksPage() {
     });
 
     const data = await res.json();
+    setRegisteringId(null);
 
     if (res.status === 409) {
-      alert('この書籍はすでに本棚に登録されています');
+      setToast({
+        message: 'この書籍はすでに本棚に登録されています',
+        type: 'error',
+      });
       return;
     }
 
     if (!res.ok) {
-      alert('登録に失敗しました');
+      setToast({ message: '登録に失敗しました', type: 'error' });
       return;
     }
 
     setUserBooks((prev) => [data.userBook, ...prev]);
-    alert(`「${info.title}」を登録しました`);
+    setToast({ message: `「${info.title}」を登録しました`, type: 'success' });
   };
 
   const isRegistered = (book: GoogleBook) => {
@@ -120,7 +146,7 @@ export default function BooksPage() {
   };
 
   const filteredBooks = userBooks
-    .filter((ub) => statusFilter === 'all' || ub.status === statusFilter)
+    .filter((ub) => statusFilter === -1 || ub.status === statusFilter)
     .filter(
       (ub) =>
         ub.books.title.includes(searchKeyword) ||
@@ -130,6 +156,14 @@ export default function BooksPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">読書</h1>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       {/* タブ */}
       <div className="flex border-b border-gray-200 mb-6">
@@ -169,29 +203,29 @@ export default function BooksPage() {
       {/* 本棚タブ */}
       {tab === 'list' && (
         <div>
-          <div className="flex flex-col sm:flex-row gap-2 mb-4">
-            <input
-              type="text"
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <div className="flex flex-col gap-2 mb-4">
+            <SearchInput
+              value={searchKeywordInput}
+              onChange={setSearchKeywordInput}
+              onSearch={handleFilterSearch}
+              loading={filterLoading}
               placeholder="タイトル・著者名で絞り込み"
             />
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                const val = e.target.value;
-                setStatusFilter(
-                  val === 'all' ? 'all' : (Number(val) as 0 | 1 | 2)
-                );
-              }}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">すべて</option>
-              <option value={0}>未読</option>
-              <option value={1}>読書中</option>
-              <option value={2}>読了</option>
-            </select>
+            <div className="flex gap-2">
+              {STATUS_FILTERS.map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setStatusFilter(value)}
+                  className={`text-xs px-3 py-1 rounded-full border ${
+                    statusFilter === value
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-500 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -219,28 +253,14 @@ export default function BooksPage() {
       {/* 書籍を探すタブ */}
       {tab === 'search' && (
         <div>
-          <div className="flex gap-2 mb-6">
-            <div className="flex-1 relative">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="書籍名・著者名で検索"
-              />
-            </div>
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? '検索中...' : '検索'}
-            </button>
+          <div className="mb-6">
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              onSearch={handleSearch}
+              loading={searchLoading}
+              placeholder="書籍名・著者名で検索"
+            />
           </div>
 
           <div className="space-y-3">
@@ -249,6 +269,7 @@ export default function BooksPage() {
               const thumbnail = info.imageLinks?.thumbnail;
               const author = info.authors?.join(', ') ?? '著者不明';
               const registered = isRegistered(book);
+              const isRegistering = registeringId === book.id;
 
               return (
                 <div
@@ -290,9 +311,10 @@ export default function BooksPage() {
                     ) : (
                       <button
                         onClick={() => handleRegister(book)}
-                        className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700"
+                        disabled={isRegistering}
+                        className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
                       >
-                        登録
+                        {isRegistering ? '登録中...' : '登録'}
                       </button>
                     )}
                   </div>

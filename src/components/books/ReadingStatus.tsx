@@ -1,3 +1,5 @@
+'use client';
+
 import { Trash2 } from 'lucide-react';
 
 const STATUS_OPTIONS = [
@@ -12,7 +14,6 @@ type Props = {
   finishedAt: string;
   progressPage: string;
   loading: boolean;
-  message: string;
   onStatusChange: (value: number) => void;
   onStartedAtChange: (value: string) => void;
   onFinishedAtChange: (value: string) => void;
@@ -27,7 +28,6 @@ export default function ReadingStatus({
   finishedAt,
   progressPage,
   loading,
-  message,
   onStatusChange,
   onStartedAtChange,
   onFinishedAtChange,
@@ -43,8 +43,6 @@ export default function ReadingStatus({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 mb-6">
-      {message && <p className="text-green-600 text-sm">{message}</p>}
-
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           読書ステータス
