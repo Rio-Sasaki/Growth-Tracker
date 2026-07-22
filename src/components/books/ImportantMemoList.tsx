@@ -1,6 +1,9 @@
+'use client';
+
 import { Star } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import SearchInput from '@/components/ui/SearchInput';
 
 type ImportantMemo = {
   id: string;
@@ -21,8 +24,10 @@ type Props = {
 };
 
 export default function ImportantMemoList({ memos }: Props) {
+  const [filterInput, setFilterInput] = useState('');
   const [filter, setFilter] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const allTags = Array.from(
     new Map(
@@ -31,6 +36,12 @@ export default function ImportantMemoList({ memos }: Props) {
         .map((t) => [t.id, t])
     ).values()
   );
+
+  const handleSearch = async () => {
+    setLoading(true);
+    setFilter(filterInput);
+    setLoading(false);
+  };
 
   const filteredMemos = memos.filter((memo) => {
     const keyword = filter.toLowerCase();
@@ -47,11 +58,11 @@ export default function ImportantMemoList({ memos }: Props) {
     <div>
       {/* フィルター */}
       <div className="space-y-2 mb-4">
-        <input
-          type="text"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <SearchInput
+          value={filterInput}
+          onChange={setFilterInput}
+          onSearch={handleSearch}
+          loading={loading}
           placeholder="書籍名・メモの内容で絞り込み"
         />
         {allTags.length > 0 && (
