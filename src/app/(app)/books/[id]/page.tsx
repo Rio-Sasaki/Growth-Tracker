@@ -6,6 +6,7 @@ import BookInfo from '@/components/books/BookInfo';
 import ReadingStatus from '@/components/books/ReadingStatus';
 import TagManager, { Tag } from '@/components/books/TagManager';
 import MemoList, { Memo } from '@/components/books/MemoList';
+import Toast from '@/components/ui/Toast';
 
 type UserBook = {
   id: string;
@@ -20,6 +21,11 @@ type UserBook = {
     thumbnail_url: string | null;
   };
 };
+
+type ToastState = {
+  message: string;
+  type: 'success' | 'error';
+} | null;
 
 export default function BookDetailPage({
   params,
@@ -36,7 +42,7 @@ export default function BookDetailPage({
   const [finishedAt, setFinishedAt] = useState('');
   const [progressPage, setProgressPage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [toast, setToast] = useState<ToastState>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [memos, setMemos] = useState<Memo[]>([]);
 
@@ -47,11 +53,9 @@ export default function BookDetailPage({
         fetch(`/api/user-books/${id}/memos`),
         fetch(`/api/user-books/${id}/tags`),
       ]);
-
       const ubData = await ubRes.json();
       const memoData = await memoRes.json();
       const tagData = await tagRes.json();
-
       if (ubData.userBook) {
         const ub = ubData.userBook;
         setUserBook(ub);
@@ -61,11 +65,9 @@ export default function BookDetailPage({
         setFinishedAt(ub.finished_at ? ub.finished_at.split('T')[0] : '');
         setProgressPage(ub.progress_page?.toString() ?? '');
       }
-
       setMemos(memoData.memos ?? []);
       setTags(tagData.tags ?? []);
     };
-
     fetchData();
   }, [id]);
 
@@ -77,8 +79,6 @@ export default function BookDetailPage({
 
   const handleSave = async () => {
     setLoading(true);
-    setMessage('');
-
     await fetch(`/api/user-books/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -90,8 +90,7 @@ export default function BookDetailPage({
         progressPage,
       }),
     });
-
-    setMessage('保存しました');
+    setToast({ message: '保存しました', type: 'success' });
     setLoading(false);
   };
 
@@ -105,7 +104,6 @@ export default function BookDetailPage({
   const handleToggleFavorite = async () => {
     const newFavorite = !isFavorite;
     setIsFavorite(newFavorite);
-
     await fetch(`/api/user-books/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -119,13 +117,11 @@ export default function BookDetailPage({
     tagIds: string[]
   ) => {
     if (!content.trim()) return;
-
     const res = await fetch(`/api/user-books/${id}/memos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content, pageNumber }),
     });
-
     const data = await res.json();
     if (data.memo) {
       await Promise.all(
@@ -174,9 +170,7 @@ export default function BookDetailPage({
   const handleToggleTag = async (memoId: string, tagId: string) => {
     const memo = memos.find((m) => m.id === memoId);
     if (!memo) return;
-
     const hasTag = memo.memo_tags.some((mt) => mt.tags.id === tagId);
-
     if (hasTag) {
       await fetch('/api/memo-tags', {
         method: 'DELETE',
@@ -199,7 +193,6 @@ export default function BookDetailPage({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, color }),
     });
-
     const data = await res.json();
     if (data.tag) {
       setTags([...tags, data.tag]);
@@ -231,6 +224,14 @@ export default function BookDetailPage({
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <BookInfo
         title={userBook.books.title}
         author={userBook.books.author}
@@ -245,7 +246,6 @@ export default function BookDetailPage({
         finishedAt={finishedAt}
         progressPage={progressPage}
         loading={loading}
-        message={message}
         onStatusChange={setStatus}
         onStartedAtChange={setStartedAt}
         onFinishedAtChange={setFinishedAt}
