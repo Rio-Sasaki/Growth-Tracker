@@ -11,7 +11,9 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [accountNameError, setAccountNameError] = useState('');
@@ -22,7 +24,6 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
       const res = await fetch('/api/profile');
       const data = await res.json();
-
       if (data.profile) {
         setAccountName(data.profile.account_name ?? '');
         setDisplayName(data.profile.display_name ?? '');
@@ -30,16 +31,18 @@ export default function ProfilePage() {
         setAvatarUrl(data.profile.avatar_url ?? null);
       }
       setFetching(false);
+      setInitialized(true);
     };
-
     fetchProfile();
   }, []);
 
   useEffect(() => {
+    if (!initialized) return;
+
     if (!accountName.trim()) {
       const timer = setTimeout(() => {
-        setAccountNameError('');
-        setIsAccountNameAvailable(true);
+        setAccountNameError('アカウント名を入力してください');
+        setIsAccountNameAvailable(false);
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -49,7 +52,6 @@ export default function ProfilePage() {
         `/api/check-account-name?name=${encodeURIComponent(accountName)}`
       );
       const data = await res.json();
-
       if (!data.available) {
         setAccountNameError('このアカウント名はすでに使用されています');
         setIsAccountNameAvailable(false);
@@ -58,9 +60,8 @@ export default function ProfilePage() {
         setIsAccountNameAvailable(true);
       }
     }, 500);
-
     return () => clearTimeout(timer);
-  }, [accountName]);
+  }, [accountName, initialized]);
 
   const handleSave = async () => {
     if (!isAccountNameAvailable) return;
@@ -120,7 +121,7 @@ export default function ProfilePage() {
   };
 
   const handleDeleteAvatar = async () => {
-    setUploading(true);
+    setDeleting(true);
     setError('');
 
     const res = await fetch('/api/avatar', {
@@ -129,12 +130,12 @@ export default function ProfilePage() {
 
     if (!res.ok) {
       setError('画像の削除に失敗しました');
-      setUploading(false);
+      setDeleting(false);
       return;
     }
 
     setAvatarUrl(null);
-    setUploading(false);
+    setDeleting(false);
   };
 
   if (fetching) {
@@ -188,7 +189,7 @@ export default function ProfilePage() {
           {avatarUrl && (
             <button
               onClick={handleDeleteAvatar}
-              disabled={uploading}
+              disabled={deleting}
               className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 disabled:opacity-50"
             >
               <X size={12} className="text-white" />
@@ -198,6 +199,7 @@ export default function ProfilePage() {
         {uploading && (
           <p className="text-xs text-gray-500">アップロード中...</p>
         )}
+        {deleting && <p className="text-xs text-gray-500">削除中...</p>}
         <input
           ref={fileInputRef}
           type="file"

@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Timer, User } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, BookOpen, Timer, User, LogOut } from 'lucide-react';
+import { createClient } from '@/lib/supabase-client';
 
 const navItems = [
   { href: '/dashboard', label: 'ホーム', icon: Home },
@@ -13,6 +14,13 @@ const navItems = [
 
 export default function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden z-50">
@@ -33,6 +41,13 @@ export default function Navigation() {
             </Link>
           );
         })}
+        <button
+          onClick={handleLogout}
+          className="flex-1 flex flex-col items-center py-2 text-xs text-gray-500"
+        >
+          <LogOut size={20} className="mb-1" />
+          <span>ログアウト</span>
+        </button>
       </div>
     </nav>
   );

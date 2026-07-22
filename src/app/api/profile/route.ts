@@ -33,21 +33,27 @@ export async function PUT(request: NextRequest) {
 
   const { accountName, displayName, bio } = await request.json();
 
-  // アカウント名の重複チェック
-  if (accountName) {
-    const existing = await prisma.profiles.findFirst({
-      where: {
-        account_name: accountName,
-        NOT: { user_id: user.id },
-      },
-    });
+  // アカウント名の必須チェック
+  if (!accountName || !accountName.trim()) {
+    return NextResponse.json(
+      { error: 'アカウント名は必須です' },
+      { status: 400 }
+    );
+  }
 
-    if (existing) {
-      return NextResponse.json(
-        { error: 'このアカウント名はすでに使用されています' },
-        { status: 409 }
-      );
-    }
+  // アカウント名の重複チェック
+  const existing = await prisma.profiles.findFirst({
+    where: {
+      account_name: accountName,
+      NOT: { user_id: user.id },
+    },
+  });
+
+  if (existing) {
+    return NextResponse.json(
+      { error: 'このアカウント名はすでに使用されています' },
+      { status: 409 }
+    );
   }
 
   const profile = await prisma.profiles.upsert({
