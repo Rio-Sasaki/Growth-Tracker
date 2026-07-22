@@ -43,14 +43,14 @@ export async function POST(
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const { content, pageNumber } = await request.json();
+  const { content, pageNumber, isImportant } = await request.json();
 
   const memo = await prisma.memos.create({
     data: {
       user_book_id: id,
       content,
       page_number: pageNumber ? Number(pageNumber) : null,
-      is_important: false,
+      is_important: isImportant ?? false,
     },
     include: {
       memo_tags: {
@@ -76,13 +76,14 @@ export async function PUT(
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const { memoId, content, isImportant } = await request.json();
+  const { memoId, content, isImportant, pageNumber } = await request.json();
 
   const memo = await prisma.memos.update({
     where: { id: memoId },
     data: {
       ...(content !== undefined && { content }),
       ...(isImportant !== undefined && { is_important: isImportant }),
+      ...(pageNumber !== undefined && { page_number: pageNumber }),
     },
     include: {
       memo_tags: {

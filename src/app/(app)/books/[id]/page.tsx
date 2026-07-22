@@ -114,13 +114,14 @@ export default function BookDetailPage({
   const handleAddMemo = async (
     content: string,
     pageNumber: string,
-    tagIds: string[]
+    tagIds: string[],
+    isImportant: boolean
   ) => {
     if (!content.trim()) return;
     const res = await fetch(`/api/user-books/${id}/memos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, pageNumber }),
+      body: JSON.stringify({ content, pageNumber, isImportant }),
     });
     const data = await res.json();
     if (data.memo) {
@@ -158,11 +159,19 @@ export default function BookDetailPage({
     await refreshMemos();
   };
 
-  const handleEditMemo = async (memoId: string, content: string) => {
+  const handleEditMemo = async (
+    memoId: string,
+    content: string,
+    pageNumber: string
+  ) => {
     await fetch(`/api/user-books/${id}/memos`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memoId, content }),
+      body: JSON.stringify({
+        memoId,
+        content,
+        pageNumber: pageNumber ? Number(pageNumber) : null,
+      }),
     });
     await refreshMemos();
   };
