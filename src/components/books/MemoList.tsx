@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, Trash2, Plus } from 'lucide-react';
+import { Star, Trash2, Plus, Pencil } from 'lucide-react';
 import { Tag } from './TagManager';
 
 export type Memo = {
@@ -18,11 +18,12 @@ type Props = {
   onAddMemo: (
     content: string,
     pageNumber: string,
-    tagIds: string[]
+    tagIds: string[],
+    isImportant: boolean
   ) => Promise<void>;
   onDeleteMemo: (memoId: string) => void;
   onToggleImportant: (memo: Memo) => void;
-  onEditMemo: (memoId: string, content: string) => void;
+  onEditMemo: (memoId: string, content: string, pageNumber: string) => void;
   onToggleTag: (memoId: string, tagId: string) => void;
 };
 
@@ -38,16 +39,19 @@ export default function MemoList({
   const [filterTagId, setFilterTagId] = useState<string | null>(null);
   const [newContent, setNewContent] = useState('');
   const [newPageNumber, setNewPageNumber] = useState('');
+  const [newIsImportant, setNewIsImportant] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [editPageNumber, setEditPageNumber] = useState('');
 
   const handleEditStart = (memo: Memo) => {
     setEditingId(memo.id);
     setEditContent(memo.content);
+    setEditPageNumber(memo.page_number?.toString() ?? '');
   };
 
   const handleEditSave = (memoId: string) => {
-    onEditMemo(memoId, editContent);
+    onEditMemo(memoId, editContent, editPageNumber);
     setEditingId(null);
   };
 
@@ -108,11 +112,27 @@ export default function MemoList({
             min={0}
           />
           <button
+            onClick={() => setNewIsImportant(!newIsImportant)}
+            className={`px-3 py-2 rounded-md border ${
+              newIsImportant
+                ? 'text-yellow-500 border-yellow-300 bg-yellow-50'
+                : 'text-gray-300 border-gray-300'
+            }`}
+          >
+            <Star size={16} fill={newIsImportant ? 'currentColor' : 'none'} />
+          </button>
+          <button
             onClick={async () => {
               const tagIds = filterTagId ? [filterTagId] : [];
-              await onAddMemo(newContent, newPageNumber, tagIds);
+              await onAddMemo(
+                newContent,
+                newPageNumber,
+                tagIds,
+                newIsImportant
+              );
               setNewContent('');
               setNewPageNumber('');
+              setNewIsImportant(false);
             }}
             className="flex items-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
           >
@@ -141,6 +161,14 @@ export default function MemoList({
                     onChange={(e) => setEditContent(e.target.value)}
                     rows={2}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                  <input
+                    type="number"
+                    value={editPageNumber}
+                    onChange={(e) => setEditPageNumber(e.target.value)}
+                    className="w-28 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ページ番号"
+                    min={0}
                   />
                   <div className="flex gap-2">
                     <button
@@ -188,7 +216,17 @@ export default function MemoList({
                         />
                       </button>
                       <button
-                        onClick={() => onDeleteMemo(memo.id)}
+                        onClick={() => handleEditStart(memo)}
+                        className="text-gray-300 hover:text-blue-500"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('このメモを削除しますか？')) {
+                            onDeleteMemo(memo.id);
+                          }
+                        }}
                         className="text-gray-300 hover:text-red-500"
                       >
                         <Trash2 size={16} />
