@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Star, Trash2, Plus, Pencil } from 'lucide-react';
 import { Tag } from './TagManager';
+import IconButton from '@/components/ui/IconButton';
 
 export type Memo = {
   id: string;
@@ -112,6 +113,7 @@ export default function MemoList({
             min={0}
           />
           <button
+            type="button"
             onClick={() => setNewIsImportant(!newIsImportant)}
             className={`px-3 py-2 rounded-md border ${
               newIsImportant
@@ -215,22 +217,20 @@ export default function MemoList({
                           fill={memo.is_important ? 'currentColor' : 'none'}
                         />
                       </button>
-                      <button
+                      <IconButton
+                        icon={Pencil}
                         onClick={() => handleEditStart(memo)}
-                        className="text-gray-300 hover:text-blue-500"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
+                        variant="primary"
+                      />
+                      <IconButton
+                        icon={Trash2}
                         onClick={() => {
                           if (confirm('このメモを削除しますか？')) {
                             onDeleteMemo(memo.id);
                           }
                         }}
-                        className="text-gray-300 hover:text-red-500"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                        variant="danger"
+                      />
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">

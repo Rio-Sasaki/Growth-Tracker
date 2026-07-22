@@ -1,142 +1,34 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { User, Pencil, X, CheckCircle } from 'lucide-react';
+import { User, Pencil, X } from 'lucide-react';
 import Image from 'next/image';
+import Toast from '@/components/ui/Toast';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function ProfilePage() {
-  const [displayName, setDisplayName] = useState('');
-  const [accountName, setAccountName] = useState('');
-  const [bio, setBio] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [initialized, setInitialized] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [accountNameError, setAccountNameError] = useState('');
-  const [isAccountNameAvailable, setIsAccountNameAvailable] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const res = await fetch('/api/profile');
-      const data = await res.json();
-      if (data.profile) {
-        setAccountName(data.profile.account_name ?? '');
-        setDisplayName(data.profile.display_name ?? '');
-        setBio(data.profile.bio ?? '');
-        setAvatarUrl(data.profile.avatar_url ?? null);
-      }
-      setFetching(false);
-      setInitialized(true);
-    };
-    fetchProfile();
-  }, []);
-
-  useEffect(() => {
-    if (!initialized) return;
-
-    if (!accountName.trim()) {
-      const timer = setTimeout(() => {
-        setAccountNameError('アカウント名を入力してください');
-        setIsAccountNameAvailable(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-
-    const timer = setTimeout(async () => {
-      const res = await fetch(
-        `/api/check-account-name?name=${encodeURIComponent(accountName)}`
-      );
-      const data = await res.json();
-      if (!data.available) {
-        setAccountNameError('このアカウント名はすでに使用されています');
-        setIsAccountNameAvailable(false);
-      } else {
-        setAccountNameError('');
-        setIsAccountNameAvailable(true);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [accountName, initialized]);
-
-  const handleSave = async () => {
-    if (!isAccountNameAvailable) return;
-
-    setLoading(true);
-    setMessage('');
-    setError('');
-
-    const res = await fetch('/api/profile', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountName, displayName, bio }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error ?? '保存に失敗しました');
-      setLoading(false);
-      return;
-    }
-
-    setMessage('プロフィールを保存しました');
-    setTimeout(() => setMessage(''), 3000);
-    setLoading(false);
-  };
-
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setError('');
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await fetch('/api/avatar', {
-      method: 'POST',
-      body: formData,
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error ?? '画像のアップロードに失敗しました');
-      setUploading(false);
-      return;
-    }
-
-    setAvatarUrl(data.avatarUrl);
-    setUploading(false);
-  };
-
-  const handleDeleteAvatar = async () => {
-    setDeleting(true);
-    setError('');
-
-    const res = await fetch('/api/avatar', {
-      method: 'DELETE',
-    });
-
-    if (!res.ok) {
-      setError('画像の削除に失敗しました');
-      setDeleting(false);
-      return;
-    }
-
-    setAvatarUrl(null);
-    setDeleting(false);
-  };
+  const {
+    displayName,
+    setDisplayName,
+    accountName,
+    setAccountName,
+    bio,
+    setBio,
+    avatarUrl,
+    loading,
+    uploading,
+    deleting,
+    fetching,
+    toast,
+    setToast,
+    error,
+    accountNameError,
+    isAccountNameAvailable,
+    fileInputRef,
+    handleSave,
+    handleAvatarClick,
+    handleFileChange,
+    handleDeleteAvatar,
+  } = useProfile();
 
   if (fetching) {
     return (
@@ -150,14 +42,12 @@ export default function ProfilePage() {
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">プロフィール</h1>
 
-      {/* トースト通知 */}
-      {message && (
-        <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50">
-          <div className="bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
-            <CheckCircle size={16} />
-            <span className="text-sm font-medium">{message}</span>
-          </div>
-        </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
 
       {/* アバター */}
@@ -222,7 +112,7 @@ export default function ProfilePage() {
             value={accountName}
             onChange={(e) => {
               setAccountName(e.target.value);
-              setMessage('');
+              setToast(null);
             }}
             className={`w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
               accountNameError

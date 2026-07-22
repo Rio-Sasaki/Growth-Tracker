@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -12,45 +11,10 @@ import {
   LabelList,
 } from 'recharts';
 import SummaryCard from '@/components/dashboard/SummaryCard';
-
-type WeeklyData = {
-  day: string;
-  minutes: number;
-};
-
-type CategoryData = {
-  category: string;
-  minutes: number;
-};
-
-type DashboardData = {
-  totalMinutesThisMonth: number;
-  totalMinutesAll: number;
-  booksThisMonth: number;
-  streak: number;
-  weeklyData: WeeklyData[];
-  categoryData: CategoryData[];
-};
+import { useDashboard } from '@/hooks/useDashboard';
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const res = await fetch('/api/dashboard');
-      const json = await res.json();
-      setData(json);
-    };
-    fetchData();
-  }, []);
-
-  const formatHours = (minutes: number) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (h === 0) return `${m}分`;
-    if (m === 0) return `${h}h`;
-    return `${h}h${m}分`;
-  };
+  const { data, formatHours } = useDashboard();
 
   if (!data) {
     return (

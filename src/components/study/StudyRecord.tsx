@@ -1,4 +1,5 @@
 import { Pencil, Trash2 } from 'lucide-react';
+import IconButton from '@/components/ui/IconButton';
 
 type Category = {
   id: string;
@@ -33,30 +34,39 @@ export default function StudyRecordCard({
             <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
               {record.categories?.name ?? 'カテゴリなし'}
             </span>
+
             <span className="text-sm font-medium text-gray-800">
               {record.duration_minutes}分
             </span>
           </div>
+
           {record.note && (
             <p className="text-xs text-gray-500">{record.note}</p>
           )}
+
           <p className="text-xs text-gray-400 mt-1">
             {new Date(record.created_at).toLocaleDateString('ja-JP')}
           </p>
         </div>
+
         <div className="flex gap-1 shrink-0">
-          <button
+          <IconButton
+            icon={Pencil}
             onClick={() => onEditStart(record)}
-            className="text-gray-400 hover:text-blue-600"
-          >
-            <Pencil size={14} />
-          </button>
-          <button
-            onClick={() => onDelete(record.id)}
-            className="text-gray-400 hover:text-red-500"
-          >
-            <Trash2 size={14} />
-          </button>
+            variant="primary"
+            size={14}
+          />
+
+          <IconButton
+            icon={Trash2}
+            onClick={() => {
+              if (confirm('この学習記録を削除しますか？')) {
+                onDelete(record.id);
+              }
+            }}
+            variant="danger"
+            size={14}
+          />
         </div>
       </div>
     </div>
