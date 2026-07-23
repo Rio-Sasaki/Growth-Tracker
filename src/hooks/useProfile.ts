@@ -48,6 +48,18 @@ export function useProfile() {
       return () => clearTimeout(timer);
     }
 
+    // 半角英数字・アンダースコア・ハイフンのみ許可
+    const validPattern = /^[a-zA-Z0-9_-]+$/;
+    if (!validPattern.test(accountName)) {
+      const timer = setTimeout(() => {
+        setAccountNameError(
+          '半角英数字・アンダースコア・ハイフンのみ使用できます'
+        );
+        setIsAccountNameAvailable(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
     const timer = setTimeout(async () => {
       const res = await fetch(
         `/api/check-account-name?name=${encodeURIComponent(accountName)}`
@@ -66,7 +78,6 @@ export function useProfile() {
 
   const handleSave = async () => {
     if (!isAccountNameAvailable) return;
-
     setLoading(true);
     setError('');
 
