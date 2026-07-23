@@ -25,6 +25,11 @@ export type EditingRecord = {
   note: string;
 };
 
+type ToastState = {
+  message: string;
+  type: 'success' | 'error';
+} | null;
+
 export function useStudy() {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -35,6 +40,7 @@ export function useStudy() {
   const [categoryId, setCategoryId] = useState('');
   const [note, setNote] = useState('');
   const [tab, setTab] = useState<'timer' | 'manual' | 'records'>('timer');
+  const [toast, setToast] = useState<ToastState>(null);
 
   const [manualDate, setManualDate] = useState(
     () => new Date().toISOString().split('T')[0]
@@ -55,7 +61,6 @@ export function useStudy() {
     null
   );
   const [loading, setLoading] = useState(false);
-
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
@@ -136,6 +141,8 @@ export function useStudy() {
       setRecords([data.study, ...records]);
     }
     setNote('');
+    setToast({ message: '学習を記録しました', type: 'success' });
+    setTimeout(() => setToast(null), 3000);
     setLoading(false);
     handleReset();
   };
@@ -165,6 +172,8 @@ export function useStudy() {
     setNote('');
     setManualStartTime('');
     setManualEndTime('');
+    setToast({ message: '学習を記録しました', type: 'success' });
+    setTimeout(() => setToast(null), 3000);
     setLoading(false);
   };
 
@@ -192,6 +201,7 @@ export function useStudy() {
       note: record.note ?? '',
     });
   };
+
   const handleEditSave = async () => {
     if (!editingRecord) return;
     setLoading(true);
@@ -259,6 +269,8 @@ export function useStudy() {
     setNote,
     tab,
     setTab,
+    toast,
+    setToast,
     manualDate,
     setManualDate,
     manualStartTime,

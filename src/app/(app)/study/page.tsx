@@ -2,6 +2,7 @@
 
 import { Play, Square, RotateCcw, Plus } from 'lucide-react';
 import StudyRecordCard from '@/components/study/StudyRecord';
+import Toast from '@/components/ui/Toast';
 import { useStudy } from '@/hooks/useStudy';
 
 export default function StudyPage() {
@@ -15,6 +16,8 @@ export default function StudyPage() {
     setNote,
     tab,
     setTab,
+    toast,
+    setToast,
     manualDate,
     setManualDate,
     manualStartTime,
@@ -46,6 +49,14 @@ export default function StudyPage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">学習</h1>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       {/* タブ */}
       <div className="flex border-b border-gray-200 mb-6">
@@ -102,7 +113,6 @@ export default function StudyPage() {
               </button>
             </div>
           </div>
-
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -268,7 +278,6 @@ export default function StudyPage() {
                 value={filterDateFrom}
                 onChange={(e) => setFilterDateFrom(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="開始日"
               />
             </div>
             <span className="flex items-center text-gray-400 text-sm">〜</span>
@@ -278,7 +287,6 @@ export default function StudyPage() {
                 value={filterDateTo}
                 onChange={(e) => setFilterDateTo(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="終了日"
               />
             </div>
           </div>
