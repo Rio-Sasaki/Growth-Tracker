@@ -88,6 +88,8 @@ erDiagram
     uuid category_id FK
     int duration_minutes
     text note
+    timestamp started_at
+    timestamp ended_at
     timestamp created_at
     timestamp updated_at
   }
@@ -197,9 +199,11 @@ erDiagram
 | id | uuid PK | プライマリキー |
 | profile_id | uuid FK | `profiles.id` への参照 |
 | category_id | uuid FK | `categories.id` への参照 |
-| duration_minutes | int | 学習時間（分単位） |
+| duration_minutes | int | 学習時間（分単位）started_at/ended_atから自動計算 |
 | note | text | メモ（任意） |
-| created_at | timestamp | 作成日時（学習日として代用） |
+| started_at | timestamp | 学習開始日時 |
+| ended_at | timestamp | 学習終了日時 |
+| created_at | timestamp | 作成日時 |
 | updated_at | timestamp | 更新日時 |
 
 ## 設計上の決定事項
@@ -218,5 +222,6 @@ erDiagram
 - **全テーブルに `created_at` / `updated_at` を追加**：`memo_tags` も含む。
 - **命名規則**：他テーブルのPKを参照するFKは `テーブル名_id` の形式で統一（例：`profile_id` / `book_id`）。
 - **RLS（Row Level Security）を全テーブルに適用**：`profile_id = auth.uid()` を条件とするポリシーで、他ユーザーのデータへのアクセスを禁止する。
-- **`studies.duration_minutes` を整数で保存**：フロントエンドのタイマーで計測した値を分単位で保存し、集計計算はアプリ側で行う。学習日は `created_at` で代用する。
+- **`studies.duration_minutes` を整数で保存**：`started_at`/`ended_at` から計算した値を分単位で保存し、集計計算はアプリ側で行う。
+- **`studies.started_at` / `studies.ended_at`**：学習の開始・終了日時を保存する。タイマー記録時は自動設定、手動入力時はユーザーが指定する。
 - **`profiles.account_name`**：URLや@メンションでの識別に使用する一意のアカウント名。`display_name` とは異なり重複不可。

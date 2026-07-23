@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
     create: { user_id: user.id },
   });
 
-  const { categoryId, durationMinutes, note } = await request.json();
+  const { categoryId, durationMinutes, note, startedAt, endedAt } =
+    await request.json();
 
   const study = await prisma.studies.create({
     data: {
@@ -51,6 +52,36 @@ export async function POST(request: NextRequest) {
       category_id: categoryId,
       duration_minutes: durationMinutes,
       note,
+      started_at: startedAt ? new Date(startedAt) : null,
+      ended_at: endedAt ? new Date(endedAt) : null,
+    },
+    include: { categories: true },
+  });
+
+  return NextResponse.json({ study });
+}
+
+export async function PUT(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: '未認証' }, { status: 401 });
+  }
+
+  const { id, categoryId, durationMinutes, note, startedAt, endedAt } =
+    await request.json();
+
+  const study = await prisma.studies.update({
+    where: { id },
+    data: {
+      category_id: categoryId,
+      duration_minutes: durationMinutes,
+      note,
+      started_at: startedAt ? new Date(startedAt) : null,
+      ended_at: endedAt ? new Date(endedAt) : null,
     },
     include: { categories: true },
   });
