@@ -21,19 +21,22 @@ export async function GET() {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // 今月の学習記録
-  const studiesThisMonth = await prisma.studies.findMany({
-    where: {
-      profile_id: profile.id,
-      created_at: { gte: startOfMonth },
-    },
-    include: { categories: true },
-  });
-
   // 全学習記録
   const allStudies = await prisma.studies.findMany({
     where: { profile_id: profile.id },
+    include: { categories: true },
     orderBy: { created_at: 'asc' },
+  });
+
+  // 学習日を取得するヘルパー（started_at があればそちらを優先）
+  const getStudyDate = (s: (typeof allStudies)[0]) => {
+    return s.started_at ? new Date(s.started_at) : new Date(s.created_at);
+  };
+
+  // 今月の学習記録
+  const studiesThisMonth = allStudies.filter((s) => {
+    const d = getStudyDate(s);
+    return d >= startOfMonth;
   });
 
   // 今月の読書冊数（読了）
@@ -62,7 +65,7 @@ export async function GET() {
     const date = new Date();
     date.setDate(date.getDate() - (6 - i));
     const dayStudies = allStudies.filter((s) => {
-      const d = new Date(s.created_at);
+      const d = getStudyDate(s);
       return (
         d.getFullYear() === date.getFullYear() &&
         d.getMonth() === date.getMonth() &&
@@ -97,7 +100,7 @@ export async function GET() {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     const hasStudy = allStudies.some((s) => {
-      const d = new Date(s.created_at);
+      const d = getStudyDate(s);
       d.setHours(0, 0, 0, 0);
       return d.getTime() === date.getTime();
     });
