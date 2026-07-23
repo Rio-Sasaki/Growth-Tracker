@@ -128,10 +128,12 @@ erDiagram
     uuid category_id FK
     int duration_minutes
     text note
+    timestamp started_at
+    timestamp ended_at
     timestamp created_at
     timestamp updated_at
   }
-
+  
   users ||--|| profiles : "user_id"
   profiles ||--o{ user_books : "profile_id"
   books ||--o{ user_books : "book_id"
