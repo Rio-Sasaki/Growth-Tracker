@@ -23,6 +23,7 @@ export default function BooksPage() {
     filterLoading,
     importantMemos,
     registeringId,
+    togglingFavoriteId,
     toast,
     setToast,
     filteredBooks,
@@ -30,6 +31,7 @@ export default function BooksPage() {
     handleSearch,
     handleFilterSearch,
     handleRegister,
+    handleToggleFavorite,
     isRegistered,
   } = useBooks();
 
@@ -123,6 +125,11 @@ export default function BooksPage() {
                   thumbnailUrl={ub.books.thumbnail_url}
                   status={ub.status}
                   isFavorite={ub.is_favorite}
+                  isTogglingFavorite={togglingFavoriteId === ub.id}
+                  onToggleFavorite={(e) => {
+                    e.preventDefault();
+                    handleToggleFavorite(ub.id, ub.is_favorite);
+                  }}
                 />
               ))
             )}

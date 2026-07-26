@@ -55,6 +55,9 @@ export function useBooks() {
   const [userBooks, setUserBooks] = useState<UserBook[]>([]);
   const [importantMemos, setImportantMemos] = useState<ImportantMemo[]>([]);
   const [registeringId, setRegisteringId] = useState<string | null>(null);
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(
+    null
+  );
   const [toast, setToast] = useState<ToastState>(null);
 
   useEffect(() => {
@@ -133,6 +136,21 @@ export function useBooks() {
     setToast({ message: `「${info.title}」を登録しました`, type: 'success' });
   };
 
+  const handleToggleFavorite = async (id: string, currentFavorite: boolean) => {
+    setTogglingFavoriteId(id);
+    await fetch(`/api/user-books/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isFavorite: !currentFavorite }),
+    });
+    setUserBooks((prev) =>
+      prev.map((ub) =>
+        ub.id === id ? { ...ub, is_favorite: !currentFavorite } : ub
+      )
+    );
+    setTogglingFavoriteId(null);
+  };
+
   const isRegistered = (book: GoogleBook) => {
     return userBooks.some((ub) => ub.books.google_books_id === book.id);
   };
@@ -160,6 +178,7 @@ export function useBooks() {
     userBooks,
     importantMemos,
     registeringId,
+    togglingFavoriteId,
     toast,
     setToast,
     filteredBooks,
@@ -167,6 +186,7 @@ export function useBooks() {
     handleSearch,
     handleFilterSearch,
     handleRegister,
+    handleToggleFavorite,
     isRegistered,
   };
 }

@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart } from 'lucide-react';
@@ -15,6 +17,8 @@ type Props = {
   thumbnailUrl: string | null;
   status: number;
   isFavorite: boolean;
+  isTogglingFavorite?: boolean;
+  onToggleFavorite?: (e: React.MouseEvent) => void;
 };
 
 export default function BookCard({
@@ -24,6 +28,8 @@ export default function BookCard({
   thumbnailUrl,
   status,
   isFavorite,
+  isTogglingFavorite = false,
+  onToggleFavorite,
 }: Props) {
   return (
     <Link
@@ -59,11 +65,23 @@ export default function BookCard({
         </span>
       </div>
       <div className="shrink-0 flex items-center">
-        <Heart
-          size={16}
-          fill={isFavorite ? 'currentColor' : 'none'}
-          className={isFavorite ? 'text-red-500' : 'text-gray-300'}
-        />
+        <button
+          onClick={onToggleFavorite}
+          disabled={isTogglingFavorite}
+          className="cursor-pointer disabled:opacity-50"
+        >
+          {isTogglingFavorite ? (
+            <span className="text-xs text-gray-400">...</span>
+          ) : (
+            <Heart
+              size={16}
+              fill={isFavorite ? 'currentColor' : 'none'}
+              className={
+                isFavorite ? 'text-red-500' : 'text-gray-300 hover:text-red-300'
+              }
+            />
+          )}
+        </button>
       </div>
     </Link>
   );
