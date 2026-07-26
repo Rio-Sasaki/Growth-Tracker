@@ -45,7 +45,7 @@ export default function BookInfo({
           <p className="text-sm text-gray-500 mb-3">{author ?? '著者不明'}</p>
           <button
             onClick={onToggleFavorite}
-            className={`flex items-center gap-1 text-sm ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
+            className={`flex items-center gap-1 text-sm cursor-pointer ${isFavorite ? 'text-red-500' : 'text-gray-400'}`}
           >
             <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
             {isFavorite ? 'お気に入り済み' : 'お気に入りに追加'}
