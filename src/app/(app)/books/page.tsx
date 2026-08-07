@@ -7,6 +7,7 @@ import ImportantMemoList from '@/components/books/ImportantMemoList';
 import Toast from '@/components/ui/Toast';
 import SearchInput from '@/components/ui/SearchInput';
 import { useBooks } from '@/hooks/useBooks';
+import { useRecommend } from '@/hooks/useRecommend';
 
 export default function BooksPage() {
   const {
@@ -21,6 +22,8 @@ export default function BooksPage() {
     searchKeywordInput,
     setSearchKeywordInput,
     filterLoading,
+    userBooks,
+    setUserBooks,
     importantMemos,
     registeringId,
     togglingFavoriteId,
@@ -28,15 +31,21 @@ export default function BooksPage() {
     setToast,
     filteredBooks,
     STATUS_FILTERS,
-    recommendations,
-    recommendLoading,
     handleSearch,
     handleFilterSearch,
     handleRegister,
     handleToggleFavorite,
-    handleRecommend,
     isRegistered,
   } = useBooks();
+
+  const {
+    recommendations,
+    recommendLoading,
+    registeringFromRecommend,
+    handleRecommend,
+    handleRegisterFromRecommend,
+    isRecommendationRegistered,
+  } = useRecommend(userBooks, setUserBooks, setToast);
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -75,7 +84,7 @@ export default function BooksPage() {
           className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1 ${tab === 'recommend' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
           <Sparkles size={14} />
-          AIレコメンド
+          おすすめ書籍
         </button>
       </div>
 
@@ -217,33 +226,62 @@ export default function BooksPage() {
               {recommendLoading ? '分析中...' : 'おすすめを表示する'}
             </button>
           </div>
+
           {recommendations.length > 0 && (
             <div className="space-y-4">
-              {recommendations.map((rec, i) => (
-                <div
-                  key={i}
-                  className="bg-white border border-gray-200 rounded-lg p-4"
-                >
-                  <div className="flex items-start gap-2 mb-2">
-                    <Sparkles
-                      size={14}
-                      className="text-blue-500 shrink-0 mt-0.5"
-                    />
-                    <div>
-                      <a
-                        href={`https://books.google.com/books?q=${encodeURIComponent(rec.title + ' ' + rec.author)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-semibold text-blue-600 hover:underline"
-                      >
-                        {rec.title}
-                      </a>
-                      <p className="text-xs text-gray-500">{rec.author}</p>
+              {recommendations.map((rec, i) => {
+                const registered = isRecommendationRegistered(rec.title);
+                const isRegistering = registeringFromRecommend === rec.title;
+                return (
+                  <div
+                    key={i}
+                    className="bg-white border border-gray-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-start gap-2">
+                        <Sparkles
+                          size={14}
+                          className="text-blue-500 shrink-0 mt-0.5"
+                        />
+                        <div>
+                          <a
+                            href={`https://books.google.com/books?q=${encodeURIComponent(rec.title + ' ' + rec.author)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-semibold text-blue-600 hover:underline"
+                          >
+                            {rec.title}
+                          </a>
+                          <p className="text-xs text-gray-500">{rec.author}</p>
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        {registered ? (
+                          <button
+                            disabled
+                            className="bg-gray-200 text-gray-500 px-3 py-1 rounded text-xs font-medium cursor-not-allowed"
+                          >
+                            登録済み
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              handleRegisterFromRecommend(rec.title, rec.author)
+                            }
+                            disabled={isRegistering}
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            {isRegistering ? '追加中...' : '本棚に追加'}
+                          </button>
+                        )}
+                      </div>
                     </div>
+                    <p className="text-xs text-gray-600 ml-5 whitespace-pre-line">
+                      {rec.reason}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-600 ml-5">{rec.reason}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
