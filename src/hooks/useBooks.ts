@@ -28,12 +28,6 @@ type ImportantMemo = {
   };
 };
 
-type Recommendation = {
-  title: string;
-  author: string;
-  reason: string;
-};
-
 type ToastState = {
   message: string;
   type: 'success' | 'error';
@@ -65,8 +59,6 @@ export function useBooks() {
     null
   );
   const [toast, setToast] = useState<ToastState>(null);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [recommendLoading, setRecommendLoading] = useState(false);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -159,16 +151,6 @@ export function useBooks() {
     setTogglingFavoriteId(null);
   };
 
-  const handleRecommend = async () => {
-    setRecommendLoading(true);
-    const res = await fetch('/api/ai/book-recommend');
-    const data = await res.json();
-    if (data.recommendations) {
-      setRecommendations(data.recommendations);
-    }
-    setRecommendLoading(false);
-  };
-
   const isRegistered = (book: GoogleBook) => {
     return userBooks.some((ub) => ub.books.google_books_id === book.id);
   };
@@ -194,6 +176,7 @@ export function useBooks() {
     setSearchKeywordInput,
     filterLoading,
     userBooks,
+    setUserBooks,
     importantMemos,
     registeringId,
     togglingFavoriteId,
@@ -201,13 +184,10 @@ export function useBooks() {
     setToast,
     filteredBooks,
     STATUS_FILTERS,
-    recommendations,
-    recommendLoading,
     handleSearch,
     handleFilterSearch,
     handleRegister,
     handleToggleFavorite,
-    handleRecommend,
     isRegistered,
   };
 }
