@@ -25,6 +25,16 @@ export type EditingRecord = {
   note: string;
 };
 
+type Advice = {
+  title: string;
+  message: string;
+};
+
+type ToastState = {
+  message: string;
+  type: 'success' | 'error';
+} | null;
+
 export function useStudy() {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -35,6 +45,7 @@ export function useStudy() {
   const [categoryId, setCategoryId] = useState('');
   const [note, setNote] = useState('');
   const [tab, setTab] = useState<'timer' | 'manual' | 'records'>('timer');
+  const [toast, setToast] = useState<ToastState>(null);
 
   const [manualDate, setManualDate] = useState(
     () => new Date().toISOString().split('T')[0]
@@ -55,10 +66,11 @@ export function useStudy() {
     null
   );
   const [loading, setLoading] = useState(false);
-
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [advices, setAdvices] = useState<Advice[]>([]);
+  const [adviceLoading, setAdviceLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,12 +126,10 @@ export function useStudy() {
   const handleSaveTimer = async () => {
     if (elapsed === 0) return;
     setLoading(true);
-
     const endedAt = new Date();
     const startedAt =
       timerStartedAt ?? new Date(endedAt.getTime() - elapsed * 1000);
     const minutes = Math.ceil(elapsed / 60);
-
     const res = await fetch('/api/studies', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -136,6 +146,8 @@ export function useStudy() {
       setRecords([data.study, ...records]);
     }
     setNote('');
+    setToast({ message: '学習を記録しました', type: 'success' });
+    setTimeout(() => setToast(null), 3000);
     setLoading(false);
     handleReset();
   };
@@ -143,10 +155,8 @@ export function useStudy() {
   const handleSaveManual = async () => {
     if (!manualDuration || manualDuration <= 0) return;
     setLoading(true);
-
     const startedAt = new Date(`${manualDate}T${manualStartTime}`);
     const endedAt = new Date(`${manualDate}T${manualEndTime}`);
-
     const res = await fetch('/api/studies', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -165,6 +175,8 @@ export function useStudy() {
     setNote('');
     setManualStartTime('');
     setManualEndTime('');
+    setToast({ message: '学習を記録しました', type: 'success' });
+    setTimeout(() => setToast(null), 3000);
     setLoading(false);
   };
 
@@ -180,7 +192,6 @@ export function useStudy() {
   const handleEditStart = (record: StudyRecord) => {
     const startedAt = record.started_at ? new Date(record.started_at) : null;
     const endedAt = record.ended_at ? new Date(record.ended_at) : null;
-
     setEditingRecord({
       id: record.id,
       categoryId: record.category_id ?? categories[0]?.id ?? '',
@@ -192,24 +203,22 @@ export function useStudy() {
       note: record.note ?? '',
     });
   };
+
   const handleEditSave = async () => {
     if (!editingRecord) return;
     setLoading(true);
-
     const startedAt = editingRecord.startTime
       ? new Date(`${editingRecord.date}T${editingRecord.startTime}`)
       : null;
     const endedAt = editingRecord.endTime
       ? new Date(`${editingRecord.date}T${editingRecord.endTime}`)
       : null;
-
     let durationMinutes = 0;
     if (startedAt && endedAt) {
       durationMinutes = Math.ceil(
         (endedAt.getTime() - startedAt.getTime()) / 60000
       );
     }
-
     const res = await fetch('/api/studies', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -230,6 +239,16 @@ export function useStudy() {
     }
     setEditingRecord(null);
     setLoading(false);
+  };
+
+  const handleGetAdvice = async () => {
+    setAdviceLoading(true);
+    const res = await fetch('/api/ai/study-advice');
+    const data = await res.json();
+    if (data.advices) {
+      setAdvices(data.advices);
+    }
+    setAdviceLoading(false);
   };
 
   const filteredRecords = records.filter((r) => {
@@ -259,6 +278,8 @@ export function useStudy() {
     setNote,
     tab,
     setTab,
+    toast,
+    setToast,
     manualDate,
     setManualDate,
     manualStartTime,
@@ -277,6 +298,8 @@ export function useStudy() {
     filterDateTo,
     setFilterDateTo,
     filteredRecords,
+    advices,
+    adviceLoading,
     formatTime,
     handleStart,
     handleStop,
@@ -286,5 +309,6 @@ export function useStudy() {
     handleDelete,
     handleEditStart,
     handleEditSave,
+    handleGetAdvice,
   };
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import { Play, Square, RotateCcw, Plus } from 'lucide-react';
+import { Play, Square, RotateCcw, Plus, Sparkles } from 'lucide-react';
 import StudyRecordCard from '@/components/study/StudyRecord';
+import Toast from '@/components/ui/Toast';
 import { useStudy } from '@/hooks/useStudy';
 
 export default function StudyPage() {
@@ -15,6 +16,8 @@ export default function StudyPage() {
     setNote,
     tab,
     setTab,
+    toast,
+    setToast,
     manualDate,
     setManualDate,
     manualStartTime,
@@ -32,6 +35,8 @@ export default function StudyPage() {
     filterDateTo,
     setFilterDateTo,
     filteredRecords,
+    advices,
+    adviceLoading,
     formatTime,
     handleStart,
     handleStop,
@@ -41,29 +46,41 @@ export default function StudyPage() {
     handleDelete,
     handleEditStart,
     handleEditSave,
+    handleGetAdvice,
   } = useStudy();
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">学習</h1>
 
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {/* タブ */}
       <div className="flex border-b border-gray-200 mb-6">
-        {(['timer', 'manual', 'records'] as const).map((t) => (
+        {(['timer', 'manual', 'records', 'advice'] as const).map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+            onClick={() => setTab(t as 'timer' | 'manual' | 'records')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1 ${
               tab === t
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
+            {t === 'advice' && <Sparkles size={14} />}
             {t === 'timer'
               ? 'タイマー'
               : t === 'manual'
                 ? '手動入力'
-                : '学習記録'}
+                : t === 'records'
+                  ? '学習記録'
+                  : 'AIアドバイス'}
           </button>
         ))}
       </div>
@@ -102,7 +119,6 @@ export default function StudyPage() {
               </button>
             </div>
           </div>
-
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -231,15 +247,10 @@ export default function StudyPage() {
       {/* 学習記録タブ */}
       {tab === 'records' && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          {/* カテゴリフィルター */}
           <div className="flex flex-wrap gap-2 mb-3">
             <button
               onClick={() => setFilterCategoryId(null)}
-              className={`text-xs px-3 py-1 rounded-full border ${
-                !filterCategoryId
-                  ? 'bg-gray-800 text-white border-gray-800'
-                  : 'bg-white text-gray-500 border-gray-300'
-              }`}
+              className={`text-xs px-3 py-1 rounded-full border ${!filterCategoryId ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-300'}`}
             >
               すべて
             </button>
@@ -249,18 +260,12 @@ export default function StudyPage() {
                 onClick={() =>
                   setFilterCategoryId(filterCategoryId === c.id ? null : c.id)
                 }
-                className={`text-xs px-3 py-1 rounded-full border ${
-                  filterCategoryId === c.id
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-500 border-gray-300'
-                }`}
+                className={`text-xs px-3 py-1 rounded-full border ${filterCategoryId === c.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-300'}`}
               >
                 {c.name}
               </button>
             ))}
           </div>
-
-          {/* 日付範囲フィルター */}
           <div className="flex gap-2 mb-4">
             <div className="flex-1">
               <input
@@ -268,7 +273,6 @@ export default function StudyPage() {
                 value={filterDateFrom}
                 onChange={(e) => setFilterDateFrom(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="開始日"
               />
             </div>
             <span className="flex items-center text-gray-400 text-sm">〜</span>
@@ -278,11 +282,9 @@ export default function StudyPage() {
                 value={filterDateTo}
                 onChange={(e) => setFilterDateTo(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="終了日"
               />
             </div>
           </div>
-
           <div className="space-y-3">
             {filteredRecords.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">
@@ -385,6 +387,46 @@ export default function StudyPage() {
               )
             )}
           </div>
+        </div>
+      )}
+
+      {/* AIアドバイスタブ */}
+      {tab === ('advice' as 'timer') && (
+        <div>
+          <div className="text-center mb-6">
+            <p className="text-sm text-gray-500 mb-4">
+              直近30日間の学習記録をもとに、AIが学習アドバイスを提供します。
+            </p>
+            <button
+              onClick={handleGetAdvice}
+              disabled={adviceLoading}
+              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 mx-auto"
+            >
+              <Sparkles size={16} />
+              {adviceLoading ? '分析中...' : 'アドバイスを表示する'}
+            </button>
+          </div>
+
+          {advices.length > 0 && (
+            <div className="space-y-4">
+              {advices.map((advice, i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-gray-200 rounded-lg p-4"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={14} className="text-blue-500 shrink-0" />
+                    <p className="text-sm font-semibold text-gray-800">
+                      {advice.title}
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-600 ml-5 whitespace-pre-line">
+                    {advice.message}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
