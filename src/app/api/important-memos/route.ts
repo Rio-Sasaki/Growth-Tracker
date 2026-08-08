@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { getProfile } from '@/lib/getProfile';
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,17 +13,14 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.upsert({
-    where: { user_id: user.id },
-    update: {},
-    create: { user_id: user.id },
-  });
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
   const memos = await prisma.memos.findMany({
     where: {
       is_important: true,
       user_books: {
-        profile_id: profile.id,
+        profile_id: profile!.id,
       },
     },
     include: {

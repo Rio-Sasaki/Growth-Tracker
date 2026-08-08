@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase-server';
-import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getProfile } from '@/lib/getProfile';
+import { prisma } from '@/lib/prisma';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -15,15 +16,11 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.upsert({
-    where: { user_id: user.id },
-    update: {},
-    create: { user_id: user.id },
-  });
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
-  // 本棚の書籍を取得
   const userBooks = await prisma.user_books.findMany({
-    where: { profile_id: profile.id },
+    where: { profile_id: profile!.id },
     include: { books: true },
   });
 
@@ -53,7 +50,7 @@ ${bookList.map((b, i) => `${i + 1}. 「${b.title}」（${b.author}）`).join('\n
   {
     "title": "書籍タイトル",
     "author": "著者名",
-   "reason": "おすすめ理由（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）"
+    "reason": "おすすめ理由（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）"
   }
 ]
 `;

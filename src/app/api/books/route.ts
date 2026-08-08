@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { getProfile } from '@/lib/getProfile';
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,14 +13,11 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.upsert({
-    where: { user_id: user.id },
-    update: {},
-    create: { user_id: user.id },
-  });
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
   const userBooks = await prisma.user_books.findMany({
-    where: { profile_id: profile.id },
+    where: { profile_id: profile!.id },
     include: { books: true },
     orderBy: { created_at: 'desc' },
   });
@@ -37,11 +35,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.upsert({
-    where: { user_id: user.id },
-    update: {},
-    create: { user_id: user.id },
-  });
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
   const {
     googleBooksId,
@@ -65,12 +60,12 @@ export async function POST(request: NextRequest) {
       page_count: pageCount,
       description,
     },
+    select: { id: true },
   });
 
-  // 既に登録済みか確認
   const existing = await prisma.user_books.findFirst({
     where: {
-      profile_id: profile.id,
+      profile_id: profile!.id,
       book_id: book.id,
     },
   });
@@ -84,7 +79,7 @@ export async function POST(request: NextRequest) {
 
   const userBook = await prisma.user_books.create({
     data: {
-      profile_id: profile.id,
+      profile_id: profile!.id,
       book_id: book.id,
       status: 0,
     },

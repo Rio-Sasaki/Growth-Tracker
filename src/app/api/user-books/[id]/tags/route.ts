@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { getProfile } from '@/lib/getProfile';
 
 export async function GET(
   request: NextRequest,
@@ -16,16 +17,11 @@ export async function GET(
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.findUnique({
-    where: { user_id: user.id },
-  });
-
-  if (!profile) {
-    return NextResponse.json({ tags: [] });
-  }
+  const { profile, error } = await getProfile(user.id);
+  if (error) return NextResponse.json({ tags: [] });
 
   const tags = await prisma.tags.findMany({
-    where: { profile_id: profile.id },
+    where: { profile_id: profile!.id },
     orderBy: { created_at: 'asc' },
   });
 
@@ -46,22 +42,14 @@ export async function POST(
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.findUnique({
-    where: { user_id: user.id },
-  });
-
-  if (!profile) {
-    return NextResponse.json(
-      { error: 'プロフィールが見つかりません' },
-      { status: 404 }
-    );
-  }
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
   const { name, color } = await request.json();
 
   const tag = await prisma.tags.create({
     data: {
-      profile_id: profile.id,
+      profile_id: profile!.id,
       name,
       color,
     },

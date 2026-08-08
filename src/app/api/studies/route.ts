@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { getProfile } from '@/lib/getProfile';
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,14 +13,11 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.upsert({
-    where: { user_id: user.id },
-    update: {},
-    create: { user_id: user.id },
-  });
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
   const studies = await prisma.studies.findMany({
-    where: { profile_id: profile.id },
+    where: { profile_id: profile!.id },
     include: { categories: true },
     orderBy: { created_at: 'desc' },
   });
@@ -37,18 +35,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.upsert({
-    where: { user_id: user.id },
-    update: {},
-    create: { user_id: user.id },
-  });
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
   const { categoryId, durationMinutes, note, startedAt, endedAt } =
     await request.json();
 
   const study = await prisma.studies.create({
     data: {
-      profile_id: profile.id,
+      profile_id: profile!.id,
       category_id: categoryId,
       duration_minutes: durationMinutes,
       note,

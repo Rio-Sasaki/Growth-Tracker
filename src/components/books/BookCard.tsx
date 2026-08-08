@@ -43,6 +43,7 @@ export default function BookCard({
           width={64}
           height={80}
           className="object-cover rounded shrink-0"
+          loading="lazy"
         />
       ) : (
         <div className="w-16 h-20 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400 shrink-0">
