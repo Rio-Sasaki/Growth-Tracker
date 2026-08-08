@@ -38,6 +38,7 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
                 isActive
                   ? 'bg-blue-50 text-blue-600'
