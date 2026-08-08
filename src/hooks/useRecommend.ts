@@ -29,14 +29,24 @@ function parseRecommendations(text: string): Recommendation[] {
   const blocks = text.split('---').filter((b) => b.trim());
   return blocks
     .map((block) => {
-      const titleMatch = block.match(/タイトル:\s*(.+)/);
-      const authorMatch = block.match(/著者:\s*(.+)/);
-      const reasonMatch = block.match(/理由:\s*([\s\S]+?)(?=---|$)/);
-      return {
-        title: titleMatch?.[1]?.trim() ?? '',
-        author: authorMatch?.[1]?.trim() ?? '',
-        reason: reasonMatch?.[1]?.trim() ?? '',
-      };
+      const lines = block.split('\n');
+      let title = '';
+      let author = '';
+      let reason = '';
+
+      for (const line of lines) {
+        if (line.startsWith('タイトル:')) {
+          title = line.replace('タイトル:', '').trim();
+        } else if (line.startsWith('著者:')) {
+          author = line.replace('著者:', '').trim();
+        } else if (line.startsWith('理由:')) {
+          reason = line.replace('理由:', '').trim();
+        } else if (reason && line.trim()) {
+          reason += '\n' + line.trim();
+        }
+      }
+
+      return { title, author, reason };
     })
     .filter((r) => r.title);
 }
@@ -73,14 +83,13 @@ export function useRecommend(
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        // 途中でもパースして表示
+        // 行単位でインクリメンタルにパース
         const partial = parseRecommendations(buffer);
         if (partial.length > 0) {
           setRecommendations(partial);
         }
       }
 
-      // 最終パース
       const final = parseRecommendations(buffer);
       setRecommendations(final);
     } catch (e) {

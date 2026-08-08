@@ -261,18 +261,25 @@ export function useStudy() {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        // 途中でもパースして表示
+        // 行単位でインクリメンタルにパース
         const blocks = buffer.split('---').filter((b) => b.trim());
         const partial = blocks
           .map((block) => {
-            const titleMatch = block.match(/タイトル:\s*(.+)/);
-            const messageMatch = block.match(
-              /アドバイス:\s*([\s\S]+?)(?=---|$)/
-            );
-            return {
-              title: titleMatch?.[1]?.trim() ?? '',
-              message: messageMatch?.[1]?.trim() ?? '',
-            };
+            const lines = block.split('\n');
+            let title = '';
+            let message = '';
+
+            for (const line of lines) {
+              if (line.startsWith('タイトル:')) {
+                title = line.replace('タイトル:', '').trim();
+              } else if (line.startsWith('アドバイス:')) {
+                message = line.replace('アドバイス:', '').trim();
+              } else if (message && line.trim()) {
+                message += '\n' + line.trim();
+              }
+            }
+
+            return { title, message };
           })
           .filter((a) => a.title);
 
