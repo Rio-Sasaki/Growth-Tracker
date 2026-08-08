@@ -84,14 +84,12 @@ export function useRecommend(
         buffer += decoder.decode(value, { stream: true });
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        // 行単位でインクリメンタルにパース
         const partial = parseRecommendations(buffer);
         if (partial.length > 0) {
           setRecommendations(partial);
         }
       }
 
-      // 最終パース
       const final = parseRecommendations(buffer);
       if (final.length > 0) {
         setRecommendations(final);
