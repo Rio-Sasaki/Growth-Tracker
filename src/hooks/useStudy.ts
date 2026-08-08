@@ -35,6 +35,34 @@ type ToastState = {
   type: 'success' | 'error';
 } | null;
 
+function parseAdvices(text: string): Advice[] {
+  const blocks = text.split('---').filter((b) => b.trim());
+  return blocks
+    .map((block) => {
+      const lines = block.split('\n');
+      let title = '';
+      let message = '';
+
+      for (const line of lines) {
+        if (line.startsWith('タイトル:')) {
+          title = line.replace('タイトル:', '').trim();
+        } else if (line.startsWith('アドバイス:')) {
+          message = line.replace('アドバイス:', '').trim();
+        } else if (
+          message &&
+          line.trim() &&
+          !line.startsWith('タイトル:') &&
+          !line.startsWith('アドバイス:')
+        ) {
+          message += '\n' + line.trim();
+        }
+      }
+
+      return { title, message };
+    })
+    .filter((a) => a.title && a.message);
+}
+
 export function useStudy() {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -262,55 +290,13 @@ export function useStudy() {
         buffer += decoder.decode(value, { stream: true });
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        // 行単位でインクリメンタルにパース
-        const blocks = buffer.split('---').filter((b) => b.trim());
-        const partial = blocks
-          .map((block) => {
-            const lines = block.split('\n');
-            let title = '';
-            let message = '';
-
-            for (const line of lines) {
-              if (line.startsWith('タイトル:')) {
-                title = line.replace('タイトル:', '').trim();
-              } else if (line.startsWith('アドバイス:')) {
-                message = line.replace('アドバイス:', '').trim();
-              } else if (message && line.trim()) {
-                message += '\n' + line.trim();
-              }
-            }
-
-            return { title, message };
-          })
-          .filter((a) => a.title);
-
+        const partial = parseAdvices(buffer);
         if (partial.length > 0) {
           setAdvices(partial);
         }
       }
 
-      // 最終パース
-      const blocks = buffer.split('---').filter((b) => b.trim());
-      const final = blocks
-        .map((block) => {
-          const lines = block.split('\n');
-          let title = '';
-          let message = '';
-
-          for (const line of lines) {
-            if (line.startsWith('タイトル:')) {
-              title = line.replace('タイトル:', '').trim();
-            } else if (line.startsWith('アドバイス:')) {
-              message = line.replace('アドバイス:', '').trim();
-            } else if (message && line.trim()) {
-              message += '\n' + line.trim();
-            }
-          }
-
-          return { title, message };
-        })
-        .filter((a) => a.title);
-
+      const final = parseAdvices(buffer);
       if (final.length > 0) {
         setAdvices(final);
       }
