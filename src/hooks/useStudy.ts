@@ -247,6 +247,7 @@ export function useStudy() {
 
     try {
       const res = await fetch('/api/ai/study-advice');
+
       if (!res.ok || !res.body) {
         setAdviceLoading(false);
         return;
@@ -260,6 +261,7 @@ export function useStudy() {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
+        await new Promise((resolve) => setTimeout(resolve, 0));
 
         // 行単位でインクリメンタルにパース
         const blocks = buffer.split('---').filter((b) => b.trim());
