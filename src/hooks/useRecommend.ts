@@ -82,6 +82,7 @@ export function useRecommend(
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
+        await new Promise((resolve) => setTimeout(resolve, 0));
 
         // 行単位でインクリメンタルにパース
         const partial = parseRecommendations(buffer);
@@ -90,8 +91,11 @@ export function useRecommend(
         }
       }
 
+      // 最終パース
       const final = parseRecommendations(buffer);
-      setRecommendations(final);
+      if (final.length > 0) {
+        setRecommendations(final);
+      }
     } catch (e) {
       console.error('recommend error:', e);
     } finally {
