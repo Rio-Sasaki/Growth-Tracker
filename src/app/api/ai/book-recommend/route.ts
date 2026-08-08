@@ -59,9 +59,7 @@ ${bookList.map((b, i) => `${i + 1}. 「${b.title}」（${b.author}）`).join('\n
 タイトル: 書籍タイトル
 著者: 著者名
 理由: おすすめ理由（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）
----
 `;
-
   const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
   const stream = new ReadableStream({

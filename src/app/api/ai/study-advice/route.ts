@@ -66,23 +66,17 @@ export async function GET() {
   const prompt = `
 あなたは学習コーチです。
 以下はユーザーの直近30日間の学習データです。
-
 【総学習時間】
 ${totalMinutes}分（${Math.floor(totalMinutes / 60)}時間${totalMinutes % 60}分）
-
 【曜日別学習時間】
 ${dayData.map((d) => `${d.day}曜日: ${d.minutes}分`).join('\n')}
-
 【カテゴリ別学習時間】
 ${categoryData.map((c) => `${c.category}: ${c.minutes}分`).join('\n')}
-
 このデータをもとに、以下の観点からアドバイスを3つ提供してください。
 ・学習時間の偏りや傾向
 ・改善できる点
 ・モチベーションを上げるための提案
-
 以下の形式で回答してください。
-
 ---
 タイトル: アドバイスのタイトル（10文字以内）
 アドバイス: 具体的なアドバイス（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）
@@ -92,7 +86,6 @@ ${categoryData.map((c) => `${c.category}: ${c.minutes}分`).join('\n')}
 ---
 タイトル: アドバイスのタイトル（10文字以内）
 アドバイス: 具体的なアドバイス（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）
----
 `;
 
   const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
