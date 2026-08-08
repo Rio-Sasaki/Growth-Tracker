@@ -32,6 +32,7 @@ export default function Navigation() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={`flex-1 flex flex-col items-center py-2 text-xs ${
                 isActive ? 'text-blue-600' : 'text-gray-500'
               }`}

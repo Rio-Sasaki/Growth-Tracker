@@ -34,6 +34,7 @@ export default function BookCard({
   return (
     <Link
       href={`/books/${id}`}
+      prefetch={false}
       className="bg-white border border-gray-200 rounded-lg p-4 flex gap-4 hover:bg-gray-50 transition-colors"
     >
       {thumbnailUrl ? (
