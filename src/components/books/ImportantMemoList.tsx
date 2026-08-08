@@ -106,6 +106,7 @@ export default function ImportantMemoList({ memos }: Props) {
             <Link
               key={memo.id}
               href={`/books/${memo.user_books.id}`}
+              prefetch={false}
               className="block bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-start gap-3">

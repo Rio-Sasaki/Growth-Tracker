@@ -21,6 +21,7 @@ export default function BookInfo({
     <div className="mb-6">
       <Link
         href="/books"
+        prefetch={false}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 mb-4"
       >
         <ChevronLeft size={16} />
