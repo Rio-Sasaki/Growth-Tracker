@@ -227,6 +227,30 @@ export default function BooksPage() {
             </button>
           </div>
 
+          {/* スケルトンUI */}
+          {recommendLoading && recommendations.length === 0 && (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white border border-gray-200 rounded-lg p-4 animate-pulse"
+                >
+                  <div className="flex items-start gap-2 mb-2">
+                    <div className="w-4 h-4 bg-gray-200 rounded shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-200 rounded w-1/4" />
+                    </div>
+                  </div>
+                  <div className="space-y-1 ml-5">
+                    <div className="h-3 bg-gray-200 rounded w-full" />
+                    <div className="h-3 bg-gray-200 rounded w-5/6" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {recommendations.length > 0 && (
             <div className="space-y-4">
               {recommendations.map((rec, i) => {

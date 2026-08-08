@@ -20,6 +20,7 @@ export async function GET() {
     where: { profile_id: profile!.id },
     include: { books: true },
     orderBy: { created_at: 'desc' },
+    take: 200,
   });
 
   return NextResponse.json({ userBooks });

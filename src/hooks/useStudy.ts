@@ -243,12 +243,48 @@ export function useStudy() {
 
   const handleGetAdvice = async () => {
     setAdviceLoading(true);
-    const res = await fetch('/api/ai/study-advice');
-    const data = await res.json();
-    if (data.advices) {
-      setAdvices(data.advices);
+    setAdvices([]);
+
+    try {
+      const res = await fetch('/api/ai/study-advice');
+      if (!res.ok || !res.body) {
+        setAdviceLoading(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // 途中でもパースして表示
+        const blocks = buffer.split('---').filter((b) => b.trim());
+        const partial = blocks
+          .map((block) => {
+            const titleMatch = block.match(/タイトル:\s*(.+)/);
+            const messageMatch = block.match(
+              /アドバイス:\s*([\s\S]+?)(?=---|$)/
+            );
+            return {
+              title: titleMatch?.[1]?.trim() ?? '',
+              message: messageMatch?.[1]?.trim() ?? '',
+            };
+          })
+          .filter((a) => a.title);
+
+        if (partial.length > 0) {
+          setAdvices(partial);
+        }
+      }
+    } catch (e) {
+      console.error('advice error:', e);
+    } finally {
+      setAdviceLoading(false);
     }
-    setAdviceLoading(false);
   };
 
   const filteredRecords = records.filter((r) => {

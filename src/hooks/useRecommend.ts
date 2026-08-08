@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { searchBooks } from '@/lib/google-books';
 
 type Recommendation = {
@@ -25,6 +25,22 @@ type UserBook = {
   };
 };
 
+function parseRecommendations(text: string): Recommendation[] {
+  const blocks = text.split('---').filter((b) => b.trim());
+  return blocks
+    .map((block) => {
+      const titleMatch = block.match(/タイトル:\s*(.+)/);
+      const authorMatch = block.match(/著者:\s*(.+)/);
+      const reasonMatch = block.match(/理由:\s*([\s\S]+?)(?=---|$)/);
+      return {
+        title: titleMatch?.[1]?.trim() ?? '',
+        author: authorMatch?.[1]?.trim() ?? '',
+        reason: reasonMatch?.[1]?.trim() ?? '',
+      };
+    })
+    .filter((r) => r.title);
+}
+
 export function useRecommend(
   userBooks: UserBook[],
   setUserBooks: React.Dispatch<React.SetStateAction<UserBook[]>>,
@@ -37,15 +53,42 @@ export function useRecommend(
     string | null
   >(null);
 
-  const handleRecommend = async () => {
+  const handleRecommend = useCallback(async () => {
     setRecommendLoading(true);
-    const res = await fetch('/api/ai/book-recommend');
-    const data = await res.json();
-    if (data.recommendations) {
-      setRecommendations(data.recommendations);
+    setRecommendations([]);
+
+    try {
+      const res = await fetch('/api/ai/book-recommend');
+      if (!res.ok || !res.body) {
+        setRecommendLoading(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // 途中でもパースして表示
+        const partial = parseRecommendations(buffer);
+        if (partial.length > 0) {
+          setRecommendations(partial);
+        }
+      }
+
+      // 最終パース
+      const final = parseRecommendations(buffer);
+      setRecommendations(final);
+    } catch (e) {
+      console.error('recommend error:', e);
+    } finally {
+      setRecommendLoading(false);
     }
-    setRecommendLoading(false);
-  };
+  }, []);
 
   const handleRegisterFromRecommend = async (title: string, author: string) => {
     setRegisteringFromRecommend(title);
