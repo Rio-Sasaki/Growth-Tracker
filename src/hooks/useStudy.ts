@@ -247,7 +247,6 @@ export function useStudy() {
 
     try {
       const res = await fetch('/api/ai/study-advice');
-
       if (!res.ok || !res.body) {
         setAdviceLoading(false);
         return;
@@ -288,6 +287,32 @@ export function useStudy() {
         if (partial.length > 0) {
           setAdvices(partial);
         }
+      }
+
+      // 最終パース
+      const blocks = buffer.split('---').filter((b) => b.trim());
+      const final = blocks
+        .map((block) => {
+          const lines = block.split('\n');
+          let title = '';
+          let message = '';
+
+          for (const line of lines) {
+            if (line.startsWith('タイトル:')) {
+              title = line.replace('タイトル:', '').trim();
+            } else if (line.startsWith('アドバイス:')) {
+              message = line.replace('アドバイス:', '').trim();
+            } else if (message && line.trim()) {
+              message += '\n' + line.trim();
+            }
+          }
+
+          return { title, message };
+        })
+        .filter((a) => a.title);
+
+      if (final.length > 0) {
+        setAdvices(final);
       }
     } catch (e) {
       console.error('advice error:', e);
