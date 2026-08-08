@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { getProfile } from '@/lib/getProfile';
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,55 +13,56 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.upsert({
-    where: { user_id: user.id },
-    update: {},
-    create: { user_id: user.id },
-  });
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // 全学習記録
-  const allStudies = await prisma.studies.findMany({
-    where: { profile_id: profile.id },
-    include: { categories: true },
-    orderBy: { created_at: 'asc' },
-  });
+  const yearAgo = new Date();
+  yearAgo.setDate(yearAgo.getDate() - 365);
+  yearAgo.setHours(0, 0, 0, 0);
 
-  // 学習日を取得するヘルパー（started_at があればそちらを優先）
+  const [allStudies, booksThisMonth] = await Promise.all([
+    prisma.studies.findMany({
+      where: {
+        profile_id: profile!.id,
+        OR: [
+          { started_at: { gte: yearAgo } },
+          { created_at: { gte: yearAgo } },
+        ],
+      },
+      include: { categories: true },
+      orderBy: { created_at: 'asc' },
+    }),
+    prisma.user_books.count({
+      where: {
+        profile_id: profile!.id,
+        status: 2,
+        finished_at: { gte: startOfMonth },
+      },
+    }),
+  ]);
+
   const getStudyDate = (s: (typeof allStudies)[0]) => {
     return s.started_at ? new Date(s.started_at) : new Date(s.created_at);
   };
 
-  // 今月の学習記録
   const studiesThisMonth = allStudies.filter((s) => {
     const d = getStudyDate(s);
     return d >= startOfMonth;
   });
 
-  // 今月の読書冊数（読了）
-  const booksThisMonth = await prisma.user_books.count({
-    where: {
-      profile_id: profile.id,
-      status: 2,
-      finished_at: { gte: startOfMonth },
-    },
-  });
-
-  // 今月の学習時間（分）
   const totalMinutesThisMonth = studiesThisMonth.reduce(
     (sum, s) => sum + s.duration_minutes,
     0
   );
 
-  // 総学習時間（分）
   const totalMinutesAll = allStudies.reduce(
     (sum, s) => sum + s.duration_minutes,
     0
   );
 
-  // 週別学習データ（直近7日）
   const weeklyData = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - i));
@@ -78,7 +80,6 @@ export async function GET() {
     };
   });
 
-  // カテゴリ別学習データ
   const categoryMap = new Map<string, { category: string; minutes: number }>();
   studiesThisMonth.forEach((s) => {
     const name = s.categories?.name ?? 'その他';
@@ -91,7 +92,14 @@ export async function GET() {
   });
   const categoryData = Array.from(categoryMap.values());
 
-  // 連続学習日数
+  const studyDateSet = new Set(
+    allStudies.map((s) => {
+      const d = getStudyDate(s);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    })
+  );
+
   let streak = 0;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -99,12 +107,7 @@ export async function GET() {
   for (let i = 0; i < 365; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    const hasStudy = allStudies.some((s) => {
-      const d = getStudyDate(s);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() === date.getTime();
-    });
-    if (hasStudy) {
+    if (studyDateSet.has(date.getTime())) {
       streak++;
     } else {
       break;

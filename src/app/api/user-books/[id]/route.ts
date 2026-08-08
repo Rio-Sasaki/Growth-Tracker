@@ -41,6 +41,22 @@ export async function PUT(
   const { status, isFavorite, startedAt, finishedAt, progressPage } =
     await request.json();
 
+  // お気に入りのみの更新の場合はbooks情報を取得しない
+  const isFavoriteOnly =
+    isFavorite !== undefined &&
+    status === undefined &&
+    startedAt === undefined &&
+    finishedAt === undefined &&
+    progressPage === undefined;
+
+  if (isFavoriteOnly) {
+    await prisma.user_books.update({
+      where: { id },
+      data: { is_favorite: isFavorite },
+    });
+    return NextResponse.json({ success: true });
+  }
+
   const userBook = await prisma.user_books.update({
     where: { id },
     data: {

@@ -137,18 +137,31 @@ export function useBooks() {
   };
 
   const handleToggleFavorite = async (id: string, currentFavorite: boolean) => {
-    setTogglingFavoriteId(id);
-    await fetch(`/api/user-books/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isFavorite: !currentFavorite }),
-    });
+    // 先にUIを更新（楽観的更新）
     setUserBooks((prev) =>
       prev.map((ub) =>
         ub.id === id ? { ...ub, is_favorite: !currentFavorite } : ub
       )
     );
+    setTogglingFavoriteId(id);
+
+    const res = await fetch(`/api/user-books/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isFavorite: !currentFavorite }),
+    });
+
     setTogglingFavoriteId(null);
+
+    // 失敗したら元に戻す
+    if (!res.ok) {
+      setUserBooks((prev) =>
+        prev.map((ub) =>
+          ub.id === id ? { ...ub, is_favorite: currentFavorite } : ub
+        )
+      );
+      setToast({ message: 'お気に入りの更新に失敗しました', type: 'error' });
+    }
   };
 
   const isRegistered = (book: GoogleBook) => {

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getProfile } from '@/lib/getProfile';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -15,18 +16,15 @@ export async function GET() {
     return NextResponse.json({ error: '未認証' }, { status: 401 });
   }
 
-  const profile = await prisma.profiles.upsert({
-    where: { user_id: user.id },
-    update: {},
-    create: { user_id: user.id },
-  });
+  const { profile, error } = await getProfile(user.id);
+  if (error) return error;
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const studies = await prisma.studies.findMany({
     where: {
-      profile_id: profile.id,
+      profile_id: profile!.id,
       created_at: { gte: thirtyDaysAgo },
     },
     include: { categories: true },
