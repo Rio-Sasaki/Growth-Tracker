@@ -81,29 +81,41 @@ ${categoryData.map((c) => `${c.category}: ${c.minutes}分`).join('\n')}
 ・改善できる点
 ・モチベーションを上げるための提案
 
-以下のJSON形式で回答してください。他の文章は一切含めないでください。
-[
-  {
-    "title": "アドバイスのタイトル（10文字以内）",
-    "message": "具体的なアドバイス（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）"
-  }
-]
+以下の形式で回答してください。
+
+---
+タイトル: アドバイスのタイトル（10文字以内）
+アドバイス: 具体的なアドバイス（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）
+---
+タイトル: アドバイスのタイトル（10文字以内）
+アドバイス: 具体的なアドバイス（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）
+---
+タイトル: アドバイスのタイトル（10文字以内）
+アドバイス: 具体的なアドバイス（2〜3文。1文は90文字以内。各文は句点「。」で終わり、文と文の間は改行してください）
+---
 `;
 
   const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-  const result = await model.generateContent(prompt);
-  const text = result.response
-    .text()
-    .replace(/```json|```/g, '')
-    .trim();
 
-  try {
-    const advices = JSON.parse(text);
-    return NextResponse.json({ advices });
-  } catch {
-    return NextResponse.json(
-      { error: 'アドバイスの生成に失敗しました' },
-      { status: 500 }
-    );
-  }
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const result = await model.generateContentStream(prompt);
+        for await (const chunk of result.stream) {
+          const text = chunk.text();
+          controller.enqueue(new TextEncoder().encode(text));
+        }
+        controller.close();
+      } catch (e) {
+        controller.error(e);
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Transfer-Encoding': 'chunked',
+    },
+  });
 }

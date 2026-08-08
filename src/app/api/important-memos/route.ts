@@ -32,7 +32,7 @@ export async function GET() {
       },
     },
     orderBy: { created_at: 'desc' },
+    take: 100,
   });
-
   return NextResponse.json({ memos });
 }
