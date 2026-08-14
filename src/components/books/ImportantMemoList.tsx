@@ -1,6 +1,5 @@
 'use client';
 
-import { Star } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import SearchInput from '@/components/ui/SearchInput';
@@ -22,6 +21,15 @@ type ImportantMemo = {
 type Props = {
   memos: ImportantMemo[];
 };
+
+const PIN_COLORS: { dome: string; base: string }[] = [
+  { dome: '#ef4444', base: '#fca5a5' },
+  { dome: '#f97316', base: '#fdba74' },
+  { dome: '#eab308', base: '#fde047' },
+  { dome: '#22c55e', base: '#86efac' },
+  { dome: '#3b82f6', base: '#93c5fd' },
+  { dome: '#a855f7', base: '#d8b4fe' },
+];
 
 export default function ImportantMemoList({ memos }: Props) {
   const [filterInput, setFilterInput] = useState('');
@@ -96,56 +104,119 @@ export default function ImportantMemoList({ memos }: Props) {
       </div>
 
       {/* メモ一覧 */}
-      <div className="space-y-3">
-        {filteredMemos.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-8">
-            該当する重要メモがありません
-          </p>
-        ) : (
-          filteredMemos.map((memo) => (
-            <Link
-              key={memo.id}
-              href={`/books/${memo.user_books.id}`}
-              prefetch={false}
-              className="block bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-start gap-3">
-                <Star
-                  size={14}
-                  className="text-yellow-500 shrink-0 mt-0.5"
-                  fill="currentColor"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-800 mb-1 whitespace-pre-line">
-                    {memo.content}
-                  </p>
-                  {memo.page_number && (
-                    <p className="text-xs text-gray-400 mb-1">
-                      p.{memo.page_number}
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-500">
-                    {memo.user_books.books.title}
-                  </p>
-                  {memo.memo_tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {memo.memo_tags.map((mt) => (
-                        <span
-                          key={mt.tags.id}
-                          className="text-xs px-2 py-0.5 rounded-full text-white"
-                          style={{ backgroundColor: mt.tags.color }}
-                        >
-                          {mt.tags.name}
-                        </span>
-                      ))}
+      {filteredMemos.length === 0 ? (
+        <p className="text-sm text-gray-500 text-center py-8">
+          該当する重要メモがありません
+        </p>
+      ) : (
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-8">
+            {filteredMemos.map((memo, index) => {
+              const pin = PIN_COLORS[index % PIN_COLORS.length];
+              return (
+                <Link
+                  key={memo.id}
+                  href={`/books/${memo.user_books.id}`}
+                  prefetch={false}
+                  className="relative block mt-8"
+                >
+                  {/* プッシュピン */}
+                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
+                    {/* 頭部（正円） */}
+                    <div
+                      style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '50%',
+                        backgroundColor: pin.dome,
+                        position: 'relative',
+                        zIndex: 2,
+                        boxShadow:
+                          '0 3px 6px rgba(0,0,0,0.25), inset -3px -3px 5px rgba(0,0,0,0.15)',
+                      }}
+                    >
+                      {/* ハイライト */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '5px',
+                          left: '6px',
+                          width: '10px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          background:
+                            'radial-gradient(circle, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 70%)',
+                        }}
+                      />
                     </div>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
+
+                    {/* 台座（頭部の後ろに少し覗く丸） */}
+                    <div
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '50%',
+                        backgroundColor: pin.base,
+                        marginTop: '-14px',
+                        zIndex: 1,
+                        boxShadow: 'inset 0 -3px 4px rgba(0,0,0,0.15)',
+                      }}
+                    />
+
+                    {/* 針 */}
+                    <div
+                      style={{
+                        width: '3px',
+                        height: '10px',
+                        marginTop: '-2px',
+                        background:
+                          'linear-gradient(to bottom, #ddd 0%, #aaa 50%, #666 100%)',
+                        borderRadius: '0 0 2px 2px',
+                        boxShadow: '1px 0 1px rgba(0,0,0,0.2)',
+                      }}
+                    />
+                  </div>
+
+                  {/* メモカード */}
+                  <div
+                    className="bg-yellow-50 rounded-sm p-4 pt-5 min-h-32 hover:brightness-95 transition-all"
+                    style={{
+                      transform: `rotate(${((index % 5) - 2) * 1.2}deg)`,
+                      boxShadow:
+                        '2px 4px 10px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.1)',
+                    }}
+                  >
+                    <p className="text-xs text-gray-700 mb-2 whitespace-pre-line leading-relaxed line-clamp-5">
+                      {memo.content}
+                    </p>
+                    {memo.page_number && (
+                      <p className="text-xs text-gray-400 mb-1">
+                        p.{memo.page_number}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 font-medium truncate border-t border-yellow-200 pt-1 mt-2">
+                      {memo.user_books.books.title}
+                    </p>
+                    {memo.memo_tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {memo.memo_tags.map((mt) => (
+                          <span
+                            key={mt.tags.id}
+                            className="text-xs px-1.5 py-0.5 rounded-full text-white"
+                            style={{ backgroundColor: mt.tags.color }}
+                          >
+                            {mt.tags.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
