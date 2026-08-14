@@ -116,7 +116,9 @@ export default function ImportantMemoList({ memos }: Props) {
                   fill="currentColor"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-800 mb-1">{memo.content}</p>
+                  <p className="text-sm text-gray-800 mb-1 whitespace-pre-line">
+                    {memo.content}
+                  </p>
                   {memo.page_number && (
                     <p className="text-xs text-gray-400 mb-1">
                       p.{memo.page_number}

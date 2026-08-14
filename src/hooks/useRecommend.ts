@@ -25,32 +25,6 @@ type UserBook = {
   };
 };
 
-function parseRecommendations(text: string): Recommendation[] {
-  const blocks = text.split('---').filter((b) => b.trim());
-  return blocks
-    .map((block) => {
-      const lines = block.split('\n');
-      let title = '';
-      let author = '';
-      let reason = '';
-
-      for (const line of lines) {
-        if (line.startsWith('タイトル:')) {
-          title = line.replace('タイトル:', '').trim();
-        } else if (line.startsWith('著者:')) {
-          author = line.replace('著者:', '').trim();
-        } else if (line.startsWith('理由:')) {
-          reason = line.replace('理由:', '').trim();
-        } else if (reason && line.trim()) {
-          reason += '\n' + line.trim();
-        }
-      }
-
-      return { title, author, reason };
-    })
-    .filter((r) => r.title);
-}
-
 export function useRecommend(
   userBooks: UserBook[],
   setUserBooks: React.Dispatch<React.SetStateAction<UserBook[]>>,
@@ -58,6 +32,7 @@ export function useRecommend(
 ) {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [recommendLoading, setRecommendLoading] = useState(false);
+  const [recommendError, setRecommendError] = useState(false);
   const [registeredTitles, setRegisteredTitles] = useState<string[]>([]);
   const [registeringFromRecommend, setRegisteringFromRecommend] = useState<
     string | null
@@ -65,11 +40,13 @@ export function useRecommend(
 
   const handleRecommend = useCallback(async () => {
     setRecommendLoading(true);
+    setRecommendError(false);
     setRecommendations([]);
 
     try {
       const res = await fetch('/api/ai/book-recommend');
       if (!res.ok || !res.body) {
+        setRecommendError(true);
         setRecommendLoading(false);
         return;
       }
@@ -82,20 +59,18 @@ export function useRecommend(
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        const partial = parseRecommendations(buffer);
-        if (partial.length > 0) {
-          setRecommendations(partial);
-        }
       }
 
-      const final = parseRecommendations(buffer);
-      if (final.length > 0) {
-        setRecommendations(final);
+      const text = buffer.replace(/```json|```/g, '').trim();
+      try {
+        const parsed = JSON.parse(text);
+        setRecommendations(parsed);
+      } catch {
+        setRecommendError(true);
       }
     } catch (e) {
       console.error('recommend error:', e);
+      setRecommendError(true);
     } finally {
       setRecommendLoading(false);
     }
@@ -166,6 +141,7 @@ export function useRecommend(
   return {
     recommendations,
     recommendLoading,
+    recommendError,
     registeringFromRecommend,
     handleRecommend,
     handleRegisterFromRecommend,
