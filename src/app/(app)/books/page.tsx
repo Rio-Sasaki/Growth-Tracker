@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles, Star } from 'lucide-react';
+import { Sparkles, Star, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 import BookCard from '@/components/books/BookCard';
 import ImportantMemoList from '@/components/books/ImportantMemoList';
@@ -41,6 +41,7 @@ export default function BooksPage() {
   const {
     recommendations,
     recommendLoading,
+    recommendError,
     registeringFromRecommend,
     handleRecommend,
     handleRegisterFromRecommend,
@@ -80,7 +81,12 @@ export default function BooksPage() {
           重要メモ
         </button>
         <button
-          onClick={() => setTab('recommend')}
+          onClick={() => {
+            setTab('recommend');
+            if (recommendations.length === 0 && !recommendLoading) {
+              handleRecommend();
+            }
+          }}
           className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1 ${tab === 'recommend' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
           <Sparkles size={14} />
@@ -226,6 +232,22 @@ export default function BooksPage() {
               {recommendLoading ? '分析中...' : 'おすすめを表示する'}
             </button>
           </div>
+
+          {/* エラー時 */}
+          {recommendError && !recommendLoading && (
+            <div className="text-center py-6">
+              <p className="text-sm text-gray-500 mb-3">
+                生成に失敗しました。もう一度お試しください。
+              </p>
+              <button
+                onClick={handleRecommend}
+                className="flex items-center gap-2 bg-gray-200 text-gray-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 mx-auto"
+              >
+                <RotateCcw size={14} />
+                再試行
+              </button>
+            </div>
+          )}
 
           {/* スケルトンUI */}
           {recommendLoading && recommendations.length === 0 && (

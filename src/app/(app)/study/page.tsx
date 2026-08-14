@@ -37,6 +37,7 @@ export default function StudyPage() {
     filteredRecords,
     advices,
     adviceLoading,
+    adviceError,
     formatTime,
     handleStart,
     handleStop,
@@ -406,6 +407,22 @@ export default function StudyPage() {
               {adviceLoading ? '分析中...' : 'アドバイスを表示する'}
             </button>
           </div>
+
+          {/* エラー時 */}
+          {adviceError && !adviceLoading && (
+            <div className="text-center py-6">
+              <p className="text-sm text-gray-500 mb-3">
+                生成に失敗しました。もう一度お試しください。
+              </p>
+              <button
+                onClick={handleGetAdvice}
+                className="flex items-center gap-2 bg-gray-200 text-gray-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 mx-auto"
+              >
+                <RotateCcw size={16} />
+                再試行
+              </button>
+            </div>
+          )}
 
           {advices.length > 0 && (
             <div className="space-y-4">

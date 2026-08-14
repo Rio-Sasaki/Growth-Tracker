@@ -35,34 +35,6 @@ type ToastState = {
   type: 'success' | 'error';
 } | null;
 
-function parseAdvices(text: string): Advice[] {
-  const blocks = text.split('---').filter((b) => b.trim());
-  return blocks
-    .map((block) => {
-      const lines = block.split('\n');
-      let title = '';
-      let message = '';
-
-      for (const line of lines) {
-        if (line.startsWith('タイトル:')) {
-          title = line.replace('タイトル:', '').trim();
-        } else if (line.startsWith('アドバイス:')) {
-          message = line.replace('アドバイス:', '').trim();
-        } else if (
-          message &&
-          line.trim() &&
-          !line.startsWith('タイトル:') &&
-          !line.startsWith('アドバイス:')
-        ) {
-          message += '\n' + line.trim();
-        }
-      }
-
-      return { title, message };
-    })
-    .filter((a) => a.title && a.message);
-}
-
 export function useStudy() {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -99,6 +71,7 @@ export function useStudy() {
   const [filterDateTo, setFilterDateTo] = useState('');
   const [advices, setAdvices] = useState<Advice[]>([]);
   const [adviceLoading, setAdviceLoading] = useState(false);
+  const [adviceError, setAdviceError] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,7 +86,13 @@ export function useStudy() {
       if (cats.length > 0) {
         setCategoryId(cats[0].id);
       }
-      setRecords(studyData.studies ?? []);
+      setRecords(
+        (studyData.studies ?? []).sort((a: StudyRecord, b: StudyRecord) => {
+          const aDate = a.started_at ?? a.created_at;
+          const bDate = b.started_at ?? b.created_at;
+          return new Date(bDate).getTime() - new Date(aDate).getTime();
+        })
+      );
     };
     fetchData();
   }, []);
@@ -271,11 +250,13 @@ export function useStudy() {
 
   const handleGetAdvice = async () => {
     setAdviceLoading(true);
+    setAdviceError(false);
     setAdvices([]);
 
     try {
       const res = await fetch('/api/ai/study-advice');
       if (!res.ok || !res.body) {
+        setAdviceError(true);
         setAdviceLoading(false);
         return;
       }
@@ -288,20 +269,18 @@ export function useStudy() {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        const partial = parseAdvices(buffer);
-        if (partial.length > 0) {
-          setAdvices(partial);
-        }
       }
 
-      const final = parseAdvices(buffer);
-      if (final.length > 0) {
-        setAdvices(final);
+      const text = buffer.replace(/```json|```/g, '').trim();
+      try {
+        const parsed = JSON.parse(text);
+        setAdvices(parsed);
+      } catch {
+        setAdviceError(true);
       }
     } catch (e) {
       console.error('advice error:', e);
+      setAdviceError(true);
     } finally {
       setAdviceLoading(false);
     }
@@ -356,6 +335,7 @@ export function useStudy() {
     filteredRecords,
     advices,
     adviceLoading,
+    adviceError,
     formatTime,
     handleStart,
     handleStop,
