@@ -10,7 +10,7 @@
 
 | 技術 | 選定理由 |
 |---|---|
-| Next.js | Reactベースのフレームワークであり、Server Actionsなど開発を効率化する機能を備えているため |
+| Next.js | Reactベースのフレームワークであり、App RouterやRoute Handlersなど開発を効率化する機能を備えているため |
 | TypeScript | 型安全性によるバグの早期発見とコード品質の向上 |
 | Tailwind CSS | HTML上でスタイルを管理でき、CSSファイルを別で管理する必要がないため開発効率が高い |
 
